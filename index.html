@@ -144,6 +144,8 @@ h3{font-size:16px;font-weight:700;margin:0 0 8px}
 .cartbar .t{flex:1;line-height:1.2}
 .cartbar .t b{display:block;font-size:20px;font-weight:800}
 .cartbar .t span{font-size:13px;opacity:.85}
+.cartbar .cx{width:46px;height:46px;border-radius:14px;background:rgba(255,243,234,.14);color:var(--plum-ink);display:grid;place-items:center;flex:none}
+.cartbar .cx svg{width:22px;height:22px}
 .cartbar .go{background:var(--saffron);color:var(--ink);min-height:52px;padding:0 22px;border-radius:14px;font-weight:800;font-size:17px}
 @media (min-width:900px){
   .sellgrid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start;margin-top:10px}
@@ -286,7 +288,8 @@ table.t tr.tot td{font-weight:800;border-bottom:0;font-size:15px}
 @keyframes glow{to{fill:var(--saffron)}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-h) + var(--safe-b) + 84px);z-index:80;background:var(--ink);color:var(--blush);
   padding:12px 16px;border-radius:14px;font-weight:600;font-size:14.5px;display:flex;gap:14px;align-items:center;max-width:92vw;box-shadow:var(--shadow)}
-.toast button{color:var(--saffron);font-weight:800}
+.toast button{color:var(--saffron);font-weight:800;white-space:nowrap}
+.toast{white-space:nowrap}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.smoke path{stroke-dashoffset:0}}
 </style>
 </head>
@@ -709,8 +712,9 @@ function pintarCarrito() {
   if (S.vista !== 'vender' || !n) { if (bar) bar.remove(); pintarDock(); return; }
   if (!bar) { bar = document.createElement('div'); bar.id = 'cartbar'; bar.className = 'cartbar'; document.body.appendChild(bar); }
   bar.innerHTML = `<div class="t"><b class="num">${gs(totalCarrito())}</b><span>${n} ${n === 1 ? 'producto' : 'productos'} · ${esc(medioActual())}</span></div>
+    <button class="cx" id="bCancelar" aria-label="Cancelar venta">${IC.x}</button>
     <button class="go" id="bCobrar">Cobrar</button>`;
-  bar.onclick = abrirCobro;
+  bar.onclick = e => { if (e.target.closest('#bCancelar')) { e.stopPropagation(); cancelarVenta(); return; } abrirCobro(); };
   pintarDock();
 }
 function medioActual() { return S.medio || S.disp.medio || 'Efectivo'; }
@@ -731,7 +735,7 @@ function htmlCarrito(enHoja) {
     <div class="field"><label>Medio de pago</label><div class="seg" id="medios">${medios.map(m => `<button data-medio="${esc(m)}" aria-pressed="${medioActual() === m}">${esc(m.replace(' / billetera', '').replace('Tarjeta de ', 'T. '))}</button>`).join('')}</div></div>
     <div class="small muted" style="margin:-2px 0 4px">${esc(S.disp.vendedor || 'Sin vendedor')} · ${esc(feriaActiva() || S.disp.canal)}</div>
     ${enHoja ? '' : `<button class="btn primary block" id="bReg" style="margin-top:10px;min-height:56px">Registrar venta · ${gs(totalCarrito())}</button>
-      <button class="btn ghost block" id="bVaciar">Vaciar</button>`}`;
+      <button class="btn ghost block" id="bVaciar">Cancelar venta</button>`}`;
 }
 function enlazarCarrito(root, alCambiar) {
   root.onclick = e => {
@@ -741,7 +745,7 @@ function enlazarCarrito(root, alCambiar) {
     else if (t.dataset.alt !== undefined) { const l = S.carrito[+t.dataset.alt]; const viejo = l.codigo; l.codigo = t.dataset.c; l.alternativas = (l.alternativas || []).filter(x => x !== t.dataset.c).concat(viejo); }
     else if (t.dataset.medio) S.medio = t.dataset.medio;
     else if (t.id === 'bReg') return registrarVenta();
-    else if (t.id === 'bVaciar') S.carrito = [];
+    else if (t.id === 'bVaciar') { cancelarVenta(); return; }
     else return;
     vibrar(10); alCambiar(); pintarTiles(); pintarCarrito();
   };
@@ -763,11 +767,12 @@ function pintarDock() {
 function abrirCobro() {
   hoja({
     titulo: 'Venta', cuerpo: () => htmlCarrito(true),
-    pie: `<button class="btn soft" data-cerrar>Seguir</button><button class="btn primary" style="flex:1;min-height:56px" id="bReg2">Registrar venta</button>`,
+    pie: `<button class="btn danger" id="bCanc2" aria-label="Cancelar venta">${IC.trash}</button><button class="btn soft" data-cerrar>Seguir</button><button class="btn primary" style="flex:1;min-height:56px" id="bReg2">Registrar venta</button>`,
     alAbrir(h) {
       const pintar = () => { $('.bd', h).innerHTML = htmlCarrito(true); $('#bReg2').textContent = 'Registrar · ' + gs(totalCarrito()); if (!S.carrito.length) cerrarHoja(); };
       enlazarCarrito($('.bd', h), pintar); pintar();
       $('#bReg2').onclick = () => { cerrarHoja(); registrarVenta(); };
+      $('#bCanc2').onclick = () => { cerrarHoja(); cancelarVenta(); };
     },
   });
 }
@@ -1521,9 +1526,18 @@ function confirmar(titulo, texto, accion, fn) {
     alAbrir(h) { $('#cfOk', h).onclick = () => { cerrarHoja(true); setTimeout(fn, 10); }; } });
 }
 let toastT;
-function toast(msg) {
+function toast(msg, accion, fn) {
   let t = $('#toast'); if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-  t.textContent = msg; t.style.display = 'flex'; clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', 3200);
+  t.textContent = msg;
+  if (accion) { const b = document.createElement('button'); b.textContent = accion; b.onclick = () => { t.style.display = 'none'; fn(); }; t.appendChild(b); }
+  t.style.display = 'flex'; clearTimeout(toastT); toastT = setTimeout(() => t.style.display = 'none', accion ? 6000 : 3200);
+}
+function cancelarVenta() {
+  if (!S.carrito.length) return;
+  const copia = S.carrito.map(l => Object.assign({}, l)), medio = S.medio;
+  S.carrito = []; S.medio = null; vibrar(25);
+  pintarTiles(); pintarCarrito();
+  toast('Venta cancelada', 'Deshacer', () => { S.carrito = copia; S.medio = medio; pintarTiles(); pintarCarrito(); });
 }
 
 /* =====================================================================
