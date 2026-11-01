@@ -146,9 +146,27 @@ h3{font-size:16px;font-weight:700;margin:0 0 8px}
 .cartbar .t span{font-size:13px;opacity:.85}
 .cartbar .go{background:var(--saffron);color:var(--ink);min-height:52px;padding:0 22px;border-radius:14px;font-weight:800;font-size:17px}
 @media (min-width:900px){
-  .sellgrid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;align-items:start}
+  .sellgrid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start;margin-top:10px}
+  .sellgrid .chips{margin:0;padding:0 0 4px}
+  .sellgrid .today{display:none}
   .cartbar{display:none!important}
-  .dock{position:sticky;top:96px}
+  .dock{position:sticky;top:calc(var(--tb,170px) + 10px);max-height:calc(100vh - var(--tb,170px) - 24px);overflow:auto;padding:16px 16px 14px;border-radius:var(--r-m)}
+  .dock h3{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;align-items:baseline}
+  .dock h3 span{font-size:12.5px;font-weight:600;color:var(--ink-3)}
+  .dz{display:flex;align-items:center;gap:10px;padding:12px;border:1.5px dashed var(--line-2);border-radius:12px;color:var(--ink-2);font-size:13.5px;line-height:1.3}
+  .dz svg{width:22px;height:22px;flex:none;color:var(--ink-3)}
+  .hoyres{display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 6px;padding-top:12px;border-top:1px solid var(--line)}
+  .hoyres b{font-size:19px;font-weight:800}
+  .ult{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:5px 0;color:var(--ink-2)}
+  .ult span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ult span:last-child{font-weight:700;color:var(--ink);flex:none}
+  .dock .seg{grid-auto-flow:row;grid-template-columns:1fr 1fr}
+  .dock .seg button{min-height:42px}
+  .dock .cl .nm b{font-size:15px}
+  .dock .cl .nm span{font-size:12.5px}
+  .dock .step button{width:32px;height:36px;font-size:19px}
+  .dock .step output{min-width:22px;font-size:15px}
+  .dock .total b{font-size:24px}
 }
 @media (max-width:899px){.dock{display:none}}
 
@@ -588,11 +606,14 @@ function render() {
   pintarCarrito();
   pintarSync();
 }
+function medirTopbar() { const t = $('#topbar'); if (t) document.documentElement.style.setProperty('--tb', t.offsetHeight + 'px'); }
+window.addEventListener('resize', medirTopbar);
 function topbar(titulo, sub, extra = '') {
   const cab = titulo === 'Aroma Studyo' ? `<div class="wordmark" aria-label="Aroma Studyo"><b>aroma</b><span>studyo</span></div>` : `<h1>${esc(titulo)}</h1>${sub ? `<div class="sub">${sub}</div>` : ''}`;
   $('#topbar').innerHTML = `<div class="brand">${MARK}<div class="grow">${cab}</div>
     <button class="sync" id="sync" title="Sincronizar ahora"><i></i><span></span></button></div>${extra}`;
   $('#sync').onclick = () => sincronizar(true);
+  requestAnimationFrame(medirTopbar);
 }
 
 /* =====================================================================
@@ -724,7 +745,16 @@ function enlazarCarrito(root, alCambiar) {
 }
 function pintarDock() {
   const d = $('#dock'); if (!d) return;
-  d.innerHTML = `<h3>Venta actual</h3>` + htmlCarrito(false);
+  if (!S.carrito.length) {
+    const vend = S.disp.vendedor, D = datos();
+    const tHoy = D.tickets.filter(t => t.fecha === hoy() && (!vend || t.vendedor === vend));
+    d.innerHTML = `<h3>Venta actual</h3>
+      <div class="dz">${IC.vender}<span>Tocá un producto o escaneá un código para empezar.</span></div>
+      <div class="hoyres"><span class="small muted">${vend ? 'Tus ventas de hoy' : 'Ventas de hoy'} · ${tHoy.length}</span><b class="num">${gs(tHoy.reduce((a, t) => a + t.total, 0))}</b></div>
+      ${tHoy.slice(0, 5).map(t => `<div class="ult"><span>${esc(t.lineas.map(l => l.aroma || l.linea).join(', '))}</span><span>${fmt(t.total)}</span></div>`).join('') || '<p class="tiny muted" style="margin:4px 0 0">Todavía no hay ventas hoy.</p>'}`;
+    return;
+  }
+  d.innerHTML = `<h3>Venta actual <span>${S.carrito.reduce((a, l) => a + l.cant, 0)} u.</span></h3>` + htmlCarrito(false);
   enlazarCarrito(d, pintarDock);
 }
 function abrirCobro() {
