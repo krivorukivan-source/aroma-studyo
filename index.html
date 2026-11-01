@@ -407,14 +407,18 @@ function colorAroma(p) {
 /* =====================================================================
    DATOS: base del servidor + operaciones pendientes
    ===================================================================== */
-(function leerConexion() {
-  const m = location.hash.match(/conectar=([A-Za-z0-9_\-]+)/);
-  if (!m) return;
+function datosDeLink(texto) {
+  const m = String(texto || '').match(/conectar=([A-Za-z0-9_\-]+)/);
+  if (!m) return null;
   try {
     const j = JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/')))));
-    const d = Object.assign({}, store.get('disp', {}), { apiUrl: j.u, clave: j.k });
-    store.set('disp', d); store.set('recienConectado', true);
-  } catch (e) {}
+    return j && j.u && j.k ? j : null;
+  } catch (e) { return null; }
+}
+(function leerConexion() {
+  if (!/conectar=/.test(location.hash)) return;
+  const j = datosDeLink(location.hash);
+  if (j) { store.set('disp', Object.assign({}, store.get('disp', {}), { apiUrl: j.u, clave: j.k })); store.set('recienConectado', true); }
   history.replaceState(null, '', location.pathname + location.search);
 })();
 const S = {
@@ -655,7 +659,28 @@ function vBienvenida() {
     <img src="${LOGO_SRC}" alt="Aroma Studyo" style="width:min(260px,70%);height:auto;display:block;margin:0 auto 6px">
     <h2 style="margin-top:0">Conectá este celular</h2>
     <p class="muted">Abrí el <b>link de conexión</b> que te pasaron por WhatsApp. Se hace una sola vez; después la app abre directo, incluso sin señal.</p>
+    <div style="text-align:left;margin:18px 0 6px">
+      <label class="small" for="linkPegado" style="font-weight:700">¿Instalaste la app en la pantalla de inicio? Pegá el link acá:</label>
+      <textarea id="linkPegado" rows="3" placeholder="https://…#conectar=…" style="width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid var(--line);font:inherit;font-size:15px;background:#fff;resize:none"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn soft" id="bPegar" style="flex:1">Pegar</button>
+        <button class="btn primary" id="bConectar" style="flex:1.4">Conectar</button>
+      </div>
+      <p class="tiny muted" id="msgCon" style="margin:8px 0 0;min-height:1em"></p>
+    </div>
     <p class="small muted">¿Sos la persona dueña? Entrá a la app desde Google, andá a Más → Conexión y tocá “Compartir link de conexión”.</p></div>`;
+  const ta = $('#linkPegado'), msg = $('#msgCon');
+  $('#bPegar').onclick = async () => {
+    try { ta.value = await navigator.clipboard.readText(); msg.textContent = ''; }
+    catch (e) { ta.focus(); msg.textContent = 'Mantené apretado el recuadro y elegí “Pegar”.'; }
+  };
+  $('#bConectar').onclick = () => {
+    const j = datosDeLink(ta.value);
+    if (!j) { msg.textContent = 'Ese no parece el link de conexión. Copialo entero desde WhatsApp y probá de nuevo.'; return; }
+    S.disp.apiUrl = j.u; S.disp.clave = j.k; store.set('disp', S.disp); store.set('recienConectado', true);
+    msg.textContent = 'Conectando…';
+    location.reload();
+  };
 }
 function vVender() {
   if (!conectado() && !S.base) return vBienvenida();
