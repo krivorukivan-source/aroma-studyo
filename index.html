@@ -659,6 +659,7 @@ function productosFiltrados() {
 function pintarTiles() {
   const lista = productosFiltrados(), el = $('#tiles'); if (!el) return;
   const enCarrito = Object.fromEntries(S.carrito.map(l => [l.codigo, l.cant]));
+  if (!datos().productos.length && conectado()) { el.innerHTML = `<div class="empty" style="grid-column:1/-1">Cargando tus productos…</div>`; return; }
   el.innerHTML = lista.length ? lista.map(p => `
     <button class="tile ${p.stock <= 0 ? 'agotado' : ''}" data-c="${esc(p.codigo)}" style="--sw:${colorAroma(p)}">
       ${enCarrito[p.codigo] ? `<span class="qty">${enCarrito[p.codigo]}</span>` : ''}
