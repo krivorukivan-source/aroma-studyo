@@ -651,7 +651,7 @@ function vVender() {
 
   const tHoy = D.tickets.filter(t => t.fecha === hoy() && (!vend || t.vendedor === vend));
   const totHoy = tHoy.reduce((a, t) => a + t.total, 0);
-  const lineasChips = [['frec', 'Más vendidos'], ...D.lineas.map(l => [l, l]), ['todos', 'Todos']];
+  const lineasChips = [['frec', 'Más vendidos'], ['todos', 'Todos (A-Z)'], ...D.lineas.map(l => [l, l])];
   $('#main').innerHTML = `
     <div class="sellgrid"><div>
       <div class="chips" id="chips">${lineasChips.map(([k, t]) => `<button class="chip" data-l="${esc(k)}" aria-pressed="${S.filtro.linea === k}">${esc(t)}</button>`).join('')}</div>
@@ -675,8 +675,11 @@ function productosFiltrados() {
     const partes = q.split(/\s+/);
     lista = lista.filter(p => { const t = norm([p.linea, p.aroma, p.codigo, p.presentacion, p.categoria, p.barras.join(' ')].join(' ')); return partes.every(x => t.includes(x)); });
   } else if (S.filtro.linea === 'frec') {
-    lista = lista.slice().sort((a, b) => (b.v60 - a.v60) || (b.stock - a.stock)).filter(p => p.v60 > 0 || p.stock > 0).slice(0, 24);
-  } else if (S.filtro.linea !== 'todos') {
+    // Todos los productos: primero los que más se venden, después el resto (con stock primero) por nombre.
+    lista = lista.slice().sort((a, b) => (b.v60 - a.v60) || ((b.stock > 0) - (a.stock > 0)) || (a.linea + a.aroma).localeCompare(b.linea + b.aroma, 'es'));
+  } else if (S.filtro.linea === 'todos') {
+    lista = lista.slice().sort((a, b) => a.linea.localeCompare(b.linea, 'es') || a.aroma.localeCompare(b.aroma, 'es'));
+  } else {
     lista = lista.filter(p => p.linea === S.filtro.linea);
   }
   return lista;
