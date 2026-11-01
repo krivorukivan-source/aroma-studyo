@@ -196,6 +196,17 @@ h3{font-size:16px;font-weight:700;margin:0 0 8px}
 .step output{min-width:30px;text-align:center;font-weight:800;font-size:17px}
 .alts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .alts button{font-size:12.5px;padding:5px 9px;border-radius:999px;background:var(--saffron-soft);font-weight:600}
+.desc{padding-top:10px;margin-top:2px}
+.desc .dr{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:30px;font-size:15px}
+.desc .dr label{font-weight:700}
+.dctl{display:flex;align-items:center;gap:6px}
+.dIn{width:96px;height:42px;border-radius:12px;border:1.5px solid var(--line-2);background:#fff;padding:0 10px;font-size:17px;font-weight:700;text-align:right}
+.dIn:focus{border-color:var(--saffron);outline:none}
+.dtipo{display:flex;border:1.5px solid var(--line-2);border-radius:12px;overflow:hidden;background:#fff}
+.dtipo button{min-width:44px;height:39px;font-weight:700;font-size:14px;color:var(--ink-2)}
+.dtipo button[aria-pressed="true"]{background:var(--saffron-soft);color:var(--ink)}
+.desc .dm span:last-child{color:var(--sage);font-weight:700}
+.derr{color:var(--chili);font-size:13px;font-weight:600;margin-top:4px}
 .total{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 6px}
 .total b{font-size:28px;font-weight:800;letter-spacing:-.02em}
 
@@ -726,7 +737,23 @@ function faltantes() {
   S.carrito.forEach(l => { tot[l.codigo] = (tot[l.codigo] || 0) + l.cant; });
   return Object.entries(tot).filter(([c, q]) => !D.prod[c] || q > D.prod[c].stock).map(([c, q]) => ({ p: D.prod[c], q }));
 }
-function totalCarrito() { return S.carrito.reduce((a, l) => { const p = datos().prod[l.codigo]; return a + l.cant * (p ? p.precio : 0); }, 0); }
+function subtotalCarrito() { return S.carrito.reduce((a, l) => { const p = datos().prod[l.codigo]; return a + l.cant * (p ? p.precio : 0); }, 0); }
+// Descuento sobre toda la venta: en % o en Gs. Por defecto 0.
+function descuento() { if (!S.desc) S.desc = { valor: 0, tipo: '%' }; return S.desc; }
+function fraccionDescuento() {
+  const d = descuento(), sub = subtotalCarrito(), v = Math.max(0, num(d.valor));
+  if (!v || !sub) return 0;
+  return d.tipo === '%' ? Math.min(v, 100) / 100 : Math.min(v, sub) / sub;
+}
+function montoDescuento() { return subtotalCarrito() * fraccionDescuento(); }
+function totalCarrito() { return subtotalCarrito() - montoDescuento(); }
+function errorDescuento() {
+  const d = descuento(), v = num(d.valor);
+  if (v < 0) return 'El descuento no puede ser negativo.';
+  if (d.tipo === '%' && v > 100) return 'El descuento no puede pasar de 100%.';
+  if (d.tipo === 'Gs.' && v > subtotalCarrito()) return 'El descuento no puede ser mayor que el subtotal.';
+  return '';
+}
 function pintarCarrito() {
   let bar = $('#cartbar');
   const n = S.carrito.reduce((a, l) => a + l.cant, 0);
@@ -752,19 +779,46 @@ function htmlCarrito(enHoja) {
         </div>
         <div class="step"><button data-m="${i}" aria-label="Quitar uno">−</button><output>${l.cant}</output><button data-p="${i}" aria-label="Sumar uno" ${l.cant >= p.stock ? 'style="opacity:.3"' : ''}>+</button></div>
       </div>`; }).join('')}</div>
-    <div class="total"><span class="muted">Total</span><b class="num">${gs(totalCarrito())}</b></div>
+    <div class="desc">
+      <div class="dr"><span class="muted">Subtotal</span><span class="num" data-sub>${gs(subtotalCarrito())}</span></div>
+      <div class="dr"><label for="dIn">Descuento</label>
+        <div class="dctl"><input id="dIn" class="dIn" inputmode="decimal" autocomplete="off" value="${esc(String(descuento().valor))}" aria-label="Descuento">
+          <div class="dtipo">${['%', 'Gs.'].map(t => `<button data-dtipo="${t}" aria-pressed="${descuento().tipo === t}">${t}</button>`).join('')}</div></div></div>
+      <div class="dr dm ${montoDescuento() ? '' : 'hidden'}" data-dmrow><span class="muted">Ahorro del cliente</span><span class="num" data-dm>−${fmt(montoDescuento())}</span></div>
+      <div class="derr hidden" data-derr></div>
+    </div>
+    <div class="total"><span class="muted">Total</span><b class="num" data-tot>${gs(totalCarrito())}</b></div>
     <div class="field"><label>Medio de pago</label><div class="seg" id="medios">${medios.map(m => `<button data-medio="${esc(m)}" aria-pressed="${medioActual() === m}">${esc(m.replace(' / billetera', '').replace('Tarjeta de ', 'T. '))}</button>`).join('')}</div></div>
     <div class="small muted" style="margin:-2px 0 4px">${esc(S.disp.vendedor || 'Sin vendedor')} · ${esc(feriaActiva() || S.disp.canal)}</div>
-    ${enHoja ? '' : `<button class="btn primary block" id="bReg" style="margin-top:10px;min-height:56px">Registrar venta · ${gs(totalCarrito())}</button>
+    ${enHoja ? '' : `<button class="btn primary block" id="bReg" style="margin-top:10px;min-height:56px" data-regtxt>Registrar venta · ${gs(totalCarrito())}</button>
       <button class="btn ghost block" id="bVaciar">Cancelar venta</button>`}`;
 }
+// Actualiza montos sin redibujar (para no perder el foco del campo de descuento).
+function refrescarMontos(root) {
+  const err = errorDescuento();
+  root.querySelectorAll('[data-sub]').forEach(x => x.textContent = gs(subtotalCarrito()));
+  root.querySelectorAll('[data-dm]').forEach(x => x.textContent = '−' + fmt(montoDescuento()));
+  root.querySelectorAll('[data-dmrow]').forEach(x => x.classList.toggle('hidden', !montoDescuento()));
+  root.querySelectorAll('[data-tot]').forEach(x => x.textContent = gs(totalCarrito()));
+  root.querySelectorAll('[data-regtxt]').forEach(x => x.textContent = 'Registrar venta · ' + gs(totalCarrito()));
+  root.querySelectorAll('[data-derr]').forEach(x => { x.textContent = err; x.classList.toggle('hidden', !err); });
+  const b2 = $('#bReg2'); if (b2) b2.textContent = 'Registrar · ' + gs(totalCarrito());
+  const bar = $('#cartbar b'); if (bar) bar.textContent = gs(totalCarrito());
+}
 function enlazarCarrito(root, alCambiar) {
+  root.oninput = e => {
+    if (!e.target.classList.contains('dIn')) return;
+    descuento().valor = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.');
+    refrescarMontos(root);
+  };
+  root.onfocusin = e => { if (e.target.classList.contains('dIn') && num(e.target.value) === 0) e.target.select(); };
   root.onclick = e => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.m !== undefined) { const l = S.carrito[+t.dataset.m]; l.cant--; if (l.cant <= 0) S.carrito.splice(+t.dataset.m, 1); }
     else if (t.dataset.p !== undefined) { const l = S.carrito[+t.dataset.p]; if (disponible(l.codigo) <= 0) { const p = datos().prod[l.codigo]; vibrar([60, 40, 60]); toast('No quedan más: ' + nombreProd(p) + ' (hay ' + fmt(p.stock) + ')'); return; } l.cant++; }
     else if (t.dataset.alt !== undefined) { const l = S.carrito[+t.dataset.alt]; const viejo = l.codigo; l.codigo = t.dataset.c; l.alternativas = (l.alternativas || []).filter(x => x !== t.dataset.c).concat(viejo); }
     else if (t.dataset.medio) S.medio = t.dataset.medio;
+    else if (t.dataset.dtipo) descuento().tipo = t.dataset.dtipo;
     else if (t.id === 'bReg') return registrarVenta();
     else if (t.id === 'bVaciar') { cancelarVenta(); return; }
     else return;
@@ -808,12 +862,16 @@ function registrarVenta() {
       pie: `<button class="btn primary block" data-cerrar>Entendido</button>` });
     return;
   }
+  const errD = errorDescuento();
+  if (errD) { vibrar([60, 40, 60]); toast(errD); return; }
   if (!S.disp.vendedor) { elegirVendedor(registrarVenta); return; }
   const f = feriaActiva();
+  const fr = fraccionDescuento();
   const op = encolar({ tipo: 'venta', fecha: hoy(), vendedor: S.disp.vendedor, canal: f ? 'Ferias y eventos' : S.disp.canal, feria: f,
-    cliente: 'Varios', medio: medioActual(), cobro: 'Cobrado', lineas: S.carrito.map(l => ({ codigo: l.codigo, cant: l.cant })) });
+    cliente: 'Varios', medio: medioActual(), cobro: 'Cobrado', lineas: S.carrito.map(l => ({ codigo: l.codigo, cant: l.cant, desc: fr ? Math.round(fr * 1e8) / 1e8 : '' })),
+    obs: fr ? 'Descuento ' + (descuento().tipo === '%' ? num(descuento().valor) + '%' : gs(num(descuento().valor))) : '' });
   const total = totalCarrito(), n = S.carrito.reduce((a, l) => a + l.cant, 0);
-  S.carrito = []; S.medio = null;
+  S.carrito = []; S.medio = null; S.desc = null;
   vibrar([20, 40, 30]);
   humo(total, n, op.id);
   render();
@@ -1240,6 +1298,7 @@ function fichaTicket(clave) {
   hoja({ titulo: t.nro ? 'Venta n.º ' + t.nro : 'Venta', cuerpo: () => `
     <div class="muted small" style="margin-top:-6px">${fechaLarga(t.fecha)} · ${esc(t.vendedor)}${t.feria ? ' · ' + esc(t.feria) : ''} · ${esc(t.medio)} · ${esc(t.cliente)}</div>
     <table class="t" style="margin-top:10px">${t.lineas.map(l => `<tr><td>${esc(l.aroma || l.linea)} <span class="muted small">${esc(l.linea)} × ${fmt(l.cant)}</span></td><td>${fmt(l.total)}</td></tr>`).join('')}
+    ${t.lineas.some(l => num(l.raw['Descuento %'])) ? `<tr><td class="muted">Incluye descuento</td><td>${pct(num(t.lineas[0].raw['Descuento %']))}</td></tr>` : ''}
     <tr class="tot"><td>Total</td><td>${gs(t.total)}</td></tr></table>
     <p class="small muted">Ganancia bruta ${gs(t.lineas.reduce((a, l) => a + l.ganancia, 0))}${t.lineas[0].comision ? ' · comisión ' + gs(t.lineas.reduce((a, l) => a + l.comision, 0)) : ''}</p>`,
     pie: `<button class="btn danger" id="bAnular" style="flex:1">${IC.trash} Anular venta</button>`,
@@ -1565,10 +1624,10 @@ function toast(msg, accion, fn) {
 }
 function cancelarVenta() {
   if (!S.carrito.length) return;
-  const copia = S.carrito.map(l => Object.assign({}, l)), medio = S.medio;
-  S.carrito = []; S.medio = null; vibrar(25);
+  const copia = S.carrito.map(l => Object.assign({}, l)), medio = S.medio, desc = S.desc;
+  S.carrito = []; S.medio = null; S.desc = null; vibrar(25);
   pintarTiles(); pintarCarrito();
-  toast('Venta cancelada', 'Deshacer', () => { S.carrito = copia; S.medio = medio; pintarTiles(); pintarCarrito(); });
+  toast('Venta cancelada', 'Deshacer', () => { S.carrito = copia; S.medio = medio; S.desc = desc; pintarTiles(); pintarCarrito(); });
 }
 
 /* =====================================================================
