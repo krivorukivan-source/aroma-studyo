@@ -453,6 +453,13 @@ function aplicarLocal(b, op) {
   } else if (op.tipo === 'codigoBarras') {
     const p = b.productos.find(x => trim(x['Código']) === op.codigoProducto);
     if (p) { const a = trim(p['Código de barras']).split(/[,\s]+/).filter(Boolean); if (!a.includes(op.codigoBarras)) a.push(op.codigoBarras); p['Código de barras'] = a.join(', '); }
+  } else if (op.tipo === 'reasociarCodigo') {
+    b.productos.forEach(x => {
+      let a = trim(x['Código de barras']).split(/[,\s]+/).filter(Boolean);
+      if (trim(x['Código']) === op.de) a = a.filter(c => c !== op.codigoBarras);
+      if (trim(x['Código']) === op.a && !a.includes(op.codigoBarras)) a.push(op.codigoBarras);
+      x['Código de barras'] = a.join(', ');
+    });
   }
 }
 
@@ -927,7 +934,8 @@ function abrirEscaner(modo, alLeer) {
   const ov = document.createElement('div'); ov.className = 'overlay'; ov.id = 'scanov';
   ov.innerHTML = `<div class="hd"><b>${modo === 'asociar' ? 'Escaneá el código del producto' : 'Escaneá los productos'}</b><button class="x" id="scX" aria-label="Cerrar">${IC.x}</button></div>
     <div class="camwrap" id="camwrap"><div id="qrbox"></div><div class="aim"></div></div>
-    <div class="scanlog"><div class="last" id="scLast">${modo === 'vender' ? 'Apuntá al código de barras. Cada lectura suma 1.' : ''}</div>
+    <div class="scanlog"><div class="row" style="align-items:center"><div class="last" id="scLast" style="flex:1">${modo === 'vender' ? 'Apuntá al código de barras. Cada lectura suma 1.' : ''}</div>
+      <button class="btn soft hidden" id="scFix" style="min-height:40px;padding:0 12px;font-size:14px;flex:none">✎ No es este</button></div>
       <div class="row"><button class="btn soft" id="scFoto" style="flex:1">${IC.cam} Sacar foto del código</button>
       ${modo === 'vender' ? `<button class="btn primary" id="scListo" style="flex:1">Listo</button>` : ''}</div>
       <input type="file" accept="image/*" capture="environment" id="scFile" class="hidden"></div>`;
@@ -936,16 +944,32 @@ function abrirEscaner(modo, alLeer) {
   const cerrar = async () => { parado = true; await detenerCamara(); ov.remove(); if (S.vista === 'vender') { pintarTiles(); pintarCarrito(); } };
   $('#scX', ov).onclick = cerrar;
   const bl = $('#scListo', ov); if (bl) bl.onclick = async () => { await cerrar(); if (S.carrito.length && window.innerWidth < 900) abrirCobro(); };
+  let ultimoLeido = null;
+  const marcarLeido = (texto, codigo, sumado) => { ultimoLeido = { texto: trim(texto), codigo, sumado: !!sumado }; $('#scFix', ov).classList.remove('hidden'); };
+  $('#scFix', ov).onclick = () => {
+    if (!ultimoLeido) return;
+    const { texto, codigo, sumado } = ultimoLeido; const viejo = datos().prod[codigo];
+    parado = true;
+    elegirProducto('¿Qué producto es este código?', datos().productos.filter(p => p.codigo !== codigo), p => {
+      if (sumado) { const l = S.carrito.find(x => x.codigo === codigo); if (l) { l.cant--; if (l.cant <= 0) S.carrito.splice(S.carrito.indexOf(l), 1); } }
+      encolar({ tipo: 'reasociarCodigo', codigoBarras: texto, de: codigo, a: p.codigo });
+      const ok = modo === 'vender' ? agregar(p.codigo, 1) : 0;
+      pintarTiles(); pintarCarrito();
+      $('#scLast', ov).textContent = 'Corregido: el código ahora es ' + nombreProd(p) + (modo === 'vender' ? (ok ? '. +1' : '. Sin stock') : '');
+      ultimoLeido = { texto, codigo: p.codigo, sumado: !!ok };
+      parado = false;
+    }, () => { parado = false; }, `Se quita ${esc(viejo ? nombreProd(viejo) : codigo)} de la venta y el código ${esc(texto)} queda asociado al producto que elijas.`);
+  };
   const leido = async texto => {
     const ahora = Date.now(); if (texto === ultimo && ahora - ultimoT < 1800) return; ultimo = texto; ultimoT = ahora;
     beep(); vibrar(40);
     if (alLeer) { await cerrar(); alLeer(texto); return; }
     const ps = buscarPorCodigo(texto);
-    if (ps.length === 1) { $('#scLast', ov).textContent = agregar(ps[0].codigo, 1) ? '+1 ' + nombreProd(ps[0]) : 'Sin stock: ' + nombreProd(ps[0]); }
-    else if (ps.length > 1) { parado = true; elegirProducto('¿Cuál de estos es?', ps, p => { $('#scLast', ov).textContent = agregar(p.codigo, 1) ? '+1 ' + nombreProd(p) : 'Sin stock: ' + nombreProd(p); parado = false; }, () => { parado = false; }); }
+    if (ps.length === 1) { const ok = agregar(ps[0].codigo, 1); $('#scLast', ov).textContent = ok ? '+1 ' + nombreProd(ps[0]) : 'Sin stock: ' + nombreProd(ps[0]); marcarLeido(texto, ps[0].codigo, ok); }
+    else if (ps.length > 1) { parado = true; elegirProducto('¿Cuál de estos es?', ps, p => { const ok = agregar(p.codigo, 1); $('#scLast', ov).textContent = ok ? '+1 ' + nombreProd(p) : 'Sin stock: ' + nombreProd(p); marcarLeido(texto, p.codigo, ok); parado = false; }, () => { parado = false; }); }
     else { parado = true; elegirProducto('Código nuevo: ¿qué producto es?', datos().productos, p => {
         encolar({ tipo: 'codigoBarras', codigoProducto: p.codigo, codigoBarras: trim(texto) });
-        const ok = agregar(p.codigo, 1); $('#scLast', ov).textContent = 'Código guardado para ' + nombreProd(p) + (ok ? '. +1' : '. Sin stock'); parado = false;
+        const ok = agregar(p.codigo, 1); $('#scLast', ov).textContent = 'Código guardado para ' + nombreProd(p) + (ok ? '. +1' : '. Sin stock'); marcarLeido(texto, p.codigo, ok); parado = false;
       }, () => { parado = false; }, `La próxima vez este código (${esc(texto)}) se reconoce solo.`); }
   };
   $('#scFoto', ov).onclick = () => $('#scFile', ov).click();
