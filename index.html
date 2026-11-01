@@ -835,9 +835,37 @@ function abrirEscaner(modo, alLeer) {
     $('#scFile', ov).click();
     return;
   }
-  iniciarCamara(t => { if (!parado) leido(t); }).catch(err => {
-    $('#camwrap', ov).innerHTML = `<div class="empty" style="color:#F6E4DA;max-width:340px">No pude abrir la cámara en vivo${err && err.name === 'NotAllowedError' ? ' (permiso denegado)' : ''}.<br><br>Usá <b>Sacar foto del código</b>: sacás la foto y la app lo lee.</div>`;
-  });
+  const arrancar = () => iniciarCamara(t => { if (!parado) leido(t); }).catch(err => ayudaCamara(ov, err, () => {
+    $('#camwrap', ov).innerHTML = '<div id="qrbox"></div><div class="aim"></div>'; arrancar(); }));
+  arrancar();
+}
+async function ayudaCamara(ov, err, reintentar) {
+  const ua = navigator.userAgent;
+  const enOtraApp = /FBAN|FBAV|Instagram|WhatsApp|Line\/|TikTok|musical_ly|; wv\)/i.test(ua);
+  const ios = /iPhone|iPad/.test(ua);
+  let estado = '';
+  try { estado = (await navigator.permissions.query({ name: 'camera' })).state; } catch (e) {}
+  const denegado = err && (err.name === 'NotAllowedError' || err.name === 'SecurityError');
+  let pasos;
+  if (!window.isSecureContext || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+    pasos = 'Este navegador no permite la cámara acá. Abrí la app desde su link en <b>' + (ios ? 'Safari' : 'Chrome') + '</b>.';
+  } else if (enOtraApp) {
+    pasos = 'Estás dentro de otra app (WhatsApp, Instagram…), que no deja usar la cámara. Tocá <b>⋮</b> arriba a la derecha → <b>Abrir en ' + (ios ? 'Safari' : 'Chrome') + '</b>.';
+  } else if (denegado && ios) {
+    pasos = 'Tocá <b>aA</b> en la barra de direcciones → <b>Configuración del sitio web</b> → <b>Cámara: Permitir</b>. Si no aparece: Ajustes del iPhone → Safari → Cámara → Permitir.';
+  } else if (denegado) {
+    pasos = (estado === 'denied' ? 'Chrome tiene la cámara <b>bloqueada</b> para esta app.' : 'Chrome no recibió permiso para la cámara.') +
+      '<br><br>1. Tocá el ícono <b>⚙︎ / candado</b> a la izquierda de la dirección (arriba) → <b>Permisos</b> → <b>Cámara</b> → <b>Permitir</b>.' +
+      '<br>2. Si ya está permitido: Ajustes del teléfono → Aplicaciones → <b>Chrome</b> → Permisos → <b>Cámara</b> → Permitir.' +
+      '<br>3. Si instalaste la app en la pantalla de inicio, mantené apretado su ícono → <b>Información</b> → Permisos → Cámara.';
+  } else {
+    pasos = 'No encontré la cámara o la está usando otra app. Cerrá otras apps de cámara y reintentá.';
+  }
+  $('#camwrap', ov).innerHTML = `<div class="empty" style="color:#F6E4DA;max-width:380px;text-align:left;line-height:1.5">
+    <b style="font-size:18px;display:block;margin-bottom:8px">No pude abrir la cámara en vivo</b>${pasos}
+    <div class="row" style="margin-top:16px"><button class="btn primary" id="scRe" style="flex:1">Reintentar</button></div>
+    <p class="small" style="opacity:.75;margin-top:12px">Mientras tanto podés usar <b>Sacar foto del código</b>.</p></div>`;
+  $('#scRe', ov).onclick = reintentar;
 }
 async function iniciarCamara(onCode) {
   const formatos = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code', 'itf'];
