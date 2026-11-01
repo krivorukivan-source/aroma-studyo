@@ -699,11 +699,32 @@ function pintarTiles() {
       <span class="ft"><span class="pr">${fmt(p.precio)}</span><span class="st">${p.stock <= 0 ? 'Agotado' : 'Quedan ' + fmt(p.stock)}</span></span>
     </button>`).join('') : `<div class="empty" style="grid-column:1/-1">No hay productos que coincidan con “${esc(S.filtro.q)}”.<br>Probá con otra palabra o escaneá el código.</div>`;
 }
-function agregar(codigo, cant = 1, alternativas) {
-  const p = datos().prod[codigo]; if (!p) return;
+function nombreProd(p) { return (p.aroma ? p.aroma + ' · ' : '') + p.linea; }
+function disponible(codigo) {
+  const p = datos().prod[codigo]; if (!p) return 0;
   const l = S.carrito.find(x => x.codigo === codigo);
-  if (l) l.cant += cant; else S.carrito.push({ codigo, cant, alternativas });
+  return Math.max(0, Math.floor(p.stock) - (l ? l.cant : 0));
+}
+// Devuelve cuántas unidades se sumaron (0 si no hay stock).
+function agregar(codigo, cant = 1, alternativas) {
+  const p = datos().prod[codigo]; if (!p) return 0;
+  const disp = disponible(codigo);
+  if (disp <= 0) {
+    vibrar([60, 40, 60]);
+    toast(p.stock <= 0 ? 'Sin stock: ' + nombreProd(p) : 'No quedan más: ' + nombreProd(p) + ' (hay ' + fmt(p.stock) + ')');
+    return 0;
+  }
+  const suma = Math.min(cant, disp);
+  const l = S.carrito.find(x => x.codigo === codigo);
+  if (l) l.cant += suma; else S.carrito.push({ codigo, cant: suma, alternativas });
+  if (suma < cant) toast('Solo hay ' + fmt(p.stock) + ' de ' + nombreProd(p));
   vibrar(18); pintarTiles(); pintarCarrito();
+  return suma;
+}
+function faltantes() {
+  const D = datos(), tot = {};
+  S.carrito.forEach(l => { tot[l.codigo] = (tot[l.codigo] || 0) + l.cant; });
+  return Object.entries(tot).filter(([c, q]) => !D.prod[c] || q > D.prod[c].stock).map(([c, q]) => ({ p: D.prod[c], q }));
 }
 function totalCarrito() { return S.carrito.reduce((a, l) => { const p = datos().prod[l.codigo]; return a + l.cant * (p ? p.precio : 0); }, 0); }
 function pintarCarrito() {
@@ -729,7 +750,7 @@ function htmlCarrito(enHoja) {
           ${l.alternativas && l.alternativas.length ? `<div class="alts"><span class="tiny muted">¿Era otro?</span>${l.alternativas.map(a => { const q = D.prod[a]; return q ? `<button data-alt="${i}" data-c="${esc(a)}">${esc(q.aroma || q.linea)} · ${esc(q.linea)}</button>` : ''; }).join('')}</div>` : ''}
           ${p.stock - l.cant < 0 ? `<span class="badge b-agotado" style="margin-top:4px">Stock en planilla: ${fmt(p.stock)}</span>` : ''}
         </div>
-        <div class="step"><button data-m="${i}" aria-label="Quitar uno">−</button><output>${l.cant}</output><button data-p="${i}" aria-label="Sumar uno">+</button></div>
+        <div class="step"><button data-m="${i}" aria-label="Quitar uno">−</button><output>${l.cant}</output><button data-p="${i}" aria-label="Sumar uno" ${l.cant >= p.stock ? 'style="opacity:.3"' : ''}>+</button></div>
       </div>`; }).join('')}</div>
     <div class="total"><span class="muted">Total</span><b class="num">${gs(totalCarrito())}</b></div>
     <div class="field"><label>Medio de pago</label><div class="seg" id="medios">${medios.map(m => `<button data-medio="${esc(m)}" aria-pressed="${medioActual() === m}">${esc(m.replace(' / billetera', '').replace('Tarjeta de ', 'T. '))}</button>`).join('')}</div></div>
@@ -741,7 +762,7 @@ function enlazarCarrito(root, alCambiar) {
   root.onclick = e => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.m !== undefined) { const l = S.carrito[+t.dataset.m]; l.cant--; if (l.cant <= 0) S.carrito.splice(+t.dataset.m, 1); }
-    else if (t.dataset.p !== undefined) S.carrito[+t.dataset.p].cant++;
+    else if (t.dataset.p !== undefined) { const l = S.carrito[+t.dataset.p]; if (disponible(l.codigo) <= 0) { const p = datos().prod[l.codigo]; vibrar([60, 40, 60]); toast('No quedan más: ' + nombreProd(p) + ' (hay ' + fmt(p.stock) + ')'); return; } l.cant++; }
     else if (t.dataset.alt !== undefined) { const l = S.carrito[+t.dataset.alt]; const viejo = l.codigo; l.codigo = t.dataset.c; l.alternativas = (l.alternativas || []).filter(x => x !== t.dataset.c).concat(viejo); }
     else if (t.dataset.medio) S.medio = t.dataset.medio;
     else if (t.id === 'bReg') return registrarVenta();
@@ -778,6 +799,15 @@ function abrirCobro() {
 }
 function registrarVenta() {
   if (!S.carrito.length) return;
+  const falt = faltantes();
+  if (falt.length) {
+    vibrar([60, 40, 60]);
+    hoja({ titulo: 'No hay stock suficiente', cuerpo: () => `<p style="margin-top:0">No se puede registrar la venta. Corregí estos productos:</p>
+      <table class="t">${falt.map(f => `<tr><td>${esc(f.p ? nombreProd(f.p) : 'Producto desconocido')}</td><td>${f.p && f.p.stock > 0 ? 'hay ' + fmt(f.p.stock) + ', pediste ' + fmt(f.q) : 'sin stock'}</td></tr>`).join('')}</table>
+      <p class="small muted">Si el producto está físicamente, cargá la compra o un “Ajuste inventario (+)” en Stock para corregir el número.</p>`,
+      pie: `<button class="btn primary block" data-cerrar>Entendido</button>` });
+    return;
+  }
   if (!S.disp.vendedor) { elegirVendedor(registrarVenta); return; }
   const f = feriaActiva();
   const op = encolar({ tipo: 'venta', fecha: hoy(), vendedor: S.disp.vendedor, canal: f ? 'Ferias y eventos' : S.disp.canal, feria: f,
@@ -853,11 +883,11 @@ function abrirEscaner(modo, alLeer) {
     beep(); vibrar(40);
     if (alLeer) { await cerrar(); alLeer(texto); return; }
     const ps = buscarPorCodigo(texto);
-    if (ps.length === 1) { agregar(ps[0].codigo, 1); $('#scLast', ov).textContent = '+1 ' + (ps[0].aroma || '') + ' · ' + ps[0].linea; }
-    else if (ps.length > 1) { parado = true; elegirProducto('¿Cuál de estos es?', ps, p => { agregar(p.codigo, 1); $('#scLast', ov).textContent = '+1 ' + (p.aroma || '') + ' · ' + p.linea; parado = false; }, () => { parado = false; }); }
+    if (ps.length === 1) { $('#scLast', ov).textContent = agregar(ps[0].codigo, 1) ? '+1 ' + nombreProd(ps[0]) : 'Sin stock: ' + nombreProd(ps[0]); }
+    else if (ps.length > 1) { parado = true; elegirProducto('¿Cuál de estos es?', ps, p => { $('#scLast', ov).textContent = agregar(p.codigo, 1) ? '+1 ' + nombreProd(p) : 'Sin stock: ' + nombreProd(p); parado = false; }, () => { parado = false; }); }
     else { parado = true; elegirProducto('Código nuevo: ¿qué producto es?', datos().productos, p => {
         encolar({ tipo: 'codigoBarras', codigoProducto: p.codigo, codigoBarras: trim(texto) });
-        agregar(p.codigo, 1); $('#scLast', ov).textContent = 'Código guardado para ' + (p.aroma || p.linea) + '. +1'; parado = false;
+        const ok = agregar(p.codigo, 1); $('#scLast', ov).textContent = 'Código guardado para ' + nombreProd(p) + (ok ? '. +1' : '. Sin stock'); parado = false;
       }, () => { parado = false; }, `La próxima vez este código (${esc(texto)}) se reconoce solo.`); }
   };
   $('#scFoto', ov).onclick = () => $('#scFile', ov).click();
@@ -1500,6 +1530,7 @@ function verErrores() {
    ===================================================================== */
 const pilaHojas = [];
 function hoja(cfg) {
+  const tt = $('#toast'); if (tt) tt.style.display = 'none';
   const z = cfg.z || 50 + pilaHojas.length * 2;
   const scrim = document.createElement('div'); scrim.className = 'scrim'; scrim.style.zIndex = z;
   const h = document.createElement('section'); h.className = 'sheet'; h.style.zIndex = z + 1; h.setAttribute('role', 'dialog'); h.setAttribute('aria-modal', 'true');
