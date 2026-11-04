@@ -1577,7 +1577,11 @@ function editar(hojaK, item, activarAlGuardar) {
       const v = valor(k, tipo); const id = 'f_' + k.replace(/\W/g, '');
       let input;
       if (tipo.startsWith('lista:')) { const op = D.listas[tipo.slice(6)] || ['Sí', 'No']; input = `<select id="${id}" data-k="${esc(k)}"><option value=""></option>${op.map(o => `<option ${o === String(v) ? 'selected' : ''}>${esc(o)}</option>`).join('')}${v && !op.includes(String(v)) ? `<option selected>${esc(v)}</option>` : ''}</select>`; }
-      else if (tipo === 'prov') input = `<select id="${id}" data-k="${esc(k)}"><option value=""></option>${D.proveedores.map(p => `<option ${p.nombre === String(v) ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}</select>`;
+      else if (tipo === 'prov') input = `<select id="${id}" data-k="${esc(k)}" data-prov="1"><option value=""></option>${D.proveedores.map(p => `<option ${p.nombre === String(v) ? 'selected' : ''}>${esc(p.nombre)}</option>`).join('')}${v && !D.proveedores.some(p => p.nombre === String(v)) ? `<option selected>${esc(v)}</option>` : ''}<option value="__nuevo__">＋ Agregar proveedor nuevo…</option></select>
+        <div class="provnuevo hidden" style="margin-top:8px;padding:12px;border:1px dashed var(--line);border-radius:14px;background:#FEFAF1">
+          <input data-np="nombre" type="text" placeholder="Nombre del proveedor" style="margin-bottom:8px">
+          <input data-np="tel" type="tel" placeholder="Teléfono / WhatsApp (opcional)">
+          <p class="tiny muted" style="margin:6px 0 0">Se guarda en Proveedores junto con este registro. Los demás datos los completás después en Más → Proveedores.</p></div>`;
       else if (tipo === 'prod') input = `<select id="${id}" data-k="${esc(k)}"><option value=""></option>${D.productos.map(p => `<option value="${esc(p.codigo)}" ${p.codigo === String(v) ? 'selected' : ''}>${esc(p.codigo + ' · ' + p.linea + ' ' + p.aroma)}</option>`).join('')}</select>`;
       else input = `<input id="${id}" data-k="${esc(k)}" data-t="${tipo}" type="${tipo === 'date' ? 'date' : tipo === 'email' ? 'email' : tipo === 'tel' ? 'tel' : 'text'}" ${['num', 'pct'].includes(tipo) ? 'inputmode="decimal"' : ''} value="${esc(v)}" placeholder="${esc(ph || (tipo === 'pct' ? 'Ej. 10' : ''))}">`;
       return `<div class="field"><label for="${id}">${esc(k.replace(' (Gs.)', ' (Gs.)'))}${tipo === 'pct' ? ' (%)' : ''}</label>${input}</div>`; }).join('')
@@ -1586,14 +1590,25 @@ function editar(hojaK, item, activarAlGuardar) {
     pie: `${!nuevo && fila ? `<button class="btn danger" id="eDel" aria-label="Borrar">${IC.trash}</button>` : ''}<button class="btn soft" data-cerrar>Cancelar</button><button class="btn primary" style="flex:1" id="eOk">Guardar</button>`,
     alAbrir(h) {
       if (hojaK === 'productos' && nuevo) {
-        const cod = $('#f_Código', h), cat = $('#f_Categoría', h);
-        cat.onchange = () => { if (cod.value) return; const pref = { 'Sahumerios': 'SAH', 'Difusores': 'DIF', 'Porta sahumerios y accesorios': 'POR' }[cat.value] || cat.value.slice(0, 3).toUpperCase();
+        const cod = h.querySelector('[data-k="Código"]'), cat = h.querySelector('[data-k="Categoría"]');
+        if (cod && cat) cat.onchange = () => { if (cod.value) return; const pref = { 'Sahumerios': 'SAH', 'Difusores': 'DIF', 'Porta sahumerios y accesorios': 'POR' }[cat.value] || cat.value.slice(0, 3).toUpperCase();
           const n = Math.max(0, ...D.productos.filter(p => p.codigo.startsWith(pref + '-')).map(p => parseInt(p.codigo.split('-')[1], 10) || 0)) + 1;
           cod.value = pref + '-' + (pref === 'POR' ? String(n).padStart(2, '0') : n); };
       }
+      h.querySelectorAll('select[data-prov]').forEach(sel => { const box = sel.nextElementSibling;
+        sel.onchange = () => { const on = sel.value === '__nuevo__'; box.classList.toggle('hidden', !on); if (on) setTimeout(() => box.querySelector('[data-np="nombre"]').focus(), 60); }; });
       $('#eOk', h).onclick = () => {
-        const datosF = {};
+        const datosF = {}, provNuevos = [];
+        for (const sel of h.querySelectorAll('select[data-prov]')) {
+          if (sel.value !== '__nuevo__') continue;
+          const box = sel.nextElementSibling, nombre = trim(box.querySelector('[data-np="nombre"]').value), tel = trim(box.querySelector('[data-np="tel"]').value);
+          if (!nombre) { box.querySelector('[data-np="nombre"]').focus(); return toast('Escribí el nombre del proveedor nuevo.'); }
+          const existe = D.proveedores.find(p => norm(p.nombre) === norm(nombre));
+          sel.dataset.nombreNuevo = existe ? existe.nombre : nombre;
+          if (!existe) provNuevos.push(Object.assign({ 'Nombre / Razón social': nombre }, tel ? { 'Teléfono / WhatsApp': tel } : {}));
+        }
         h.querySelectorAll('[data-k]').forEach(el => { const k = el.dataset.k, t = el.dataset.t; let v = el.value.trim();
+          if (v === '__nuevo__') v = el.dataset.nombreNuevo || '';
           if (t === 'num') v = v === '' ? '' : num(v.replace(/\./g, '').replace(',', '.'));
           if (t === 'pct') v = v === '' ? '' : num(v) / 100;
           if (!nuevo && String(raw[k] ?? '') === String(v)) return;
@@ -1601,6 +1616,7 @@ function editar(hojaK, item, activarAlGuardar) {
           datosF[k] = v; });
         if (nuevo && !trim(datosF[def.clave])) return toast('Completá ' + def.clave + '.');
         if (hojaK === 'productos' && nuevo && D.prod[trim(datosF['Código'])]) return toast('Ya existe un producto con ese código.');
+        provNuevos.forEach(dp => encolar({ tipo: 'guardar', hoja: 'proveedores', fila: null, datos: dp }));
         if (Object.keys(datosF).length) encolar({ tipo: 'guardar', hoja: hojaK, fila: fila || null, datos: datosF });
         if (hojaK === 'ferias') {
           const viejo = trim(raw['Nombre']), nombre = trim(datosF['Nombre'] ?? raw['Nombre']);
