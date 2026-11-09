@@ -243,6 +243,24 @@ h3{font-size:16px;font-weight:700;margin:0 0 8px}
 .panelgrid{display:grid;gap:12px}
 @media (min-width:900px){.panelgrid{grid-template-columns:1fr 1fr}}
 .bars{display:flex;flex-direction:column;gap:8px}
+button.bar{width:100%;text-align:left;background:none;padding:5px 6px;margin:-5px -6px;width:calc(100% + 12px);border-radius:10px;font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;grid-template-columns:minmax(90px,38%) 1fr auto 12px}
+button.bar:hover{background:var(--blush)}
+button.bar:active{background:var(--saffron-soft)}
+button.bar .go{width:12px;height:12px;color:var(--ink-3)}
+button.bar .lb{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.25}
+button.c{background:none;border:0;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button.c:active i{filter:brightness(1.15)}
+.mi{--t:#5E2742;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;color:var(--t);background:color-mix(in srgb,var(--t) 13%,#fffaf6);border:1px solid color-mix(in srgb,var(--t) 28%,transparent);box-shadow:inset 0 1px 0 #ffffffb3}
+.mi svg{width:24px;height:24px;stroke-width:1.6}
+.goar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--card);border:1px solid var(--line-2);color:var(--ink-2)}
+.goar svg{width:17px;height:17px}
+.li:active .goar{background:var(--saffron-soft);border-color:var(--saffron);color:var(--ink)}
+#bLimpiar[data-vacio="1"]{opacity:.45}
+#q::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.codeIn{width:100%;height:56px;border-radius:14px;border:1.5px solid var(--line-2);background:#fff;text-align:center;font-size:26px;font-weight:800;letter-spacing:.5em;padding-left:.5em}
+.codeIn:focus{border-color:var(--saffron);outline:none}
+.codeIn.mal{border-color:var(--chili);animation:sacudir .35s}
+@keyframes sacudir{25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-3px)}}
 .bar{display:grid;grid-template-columns:minmax(90px,38%) 1fr auto;gap:8px;align-items:center;font-size:13.5px}
 .bar .lb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar .tr{height:14px;border-radius:7px;background:var(--blush);overflow:hidden}
@@ -372,6 +390,15 @@ const IC = {
   scan: I('<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8 8v8M11 8v8M14 8v8M17 8v8"/>'),
   mic: I('<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
   x: I('<path d="M6 6l12 12M18 6L6 18"/>'),
+  borrar: I('<path d="M9 5h10.5A1.5 1.5 0 0 1 21 6.5v11a1.5 1.5 0 0 1-1.5 1.5H9l-6-7z"/><path d="M11.5 9.5l5 5M16.5 9.5l-5 5"/>'),
+  mClientes: I('<circle cx="9" cy="8.2" r="3.2"/><path d="M3.3 19.5c.7-3.4 2.9-5.4 5.7-5.4s5 2 5.7 5.4"/><circle cx="17.2" cy="9.3" r="2.5"/><path d="M15.8 14.4c2.5-.1 4.3 1.6 4.9 4.6"/>'),
+  mProv: I('<path d="M3.5 7.6 12 3.2l8.5 4.4v8.8L12 20.8l-8.5-4.4z"/><path d="M3.5 7.6 12 12l8.5-4.4M12 12v8.8"/><path d="m7.8 5.4 8.4 4.4"/>'),
+  mVend: I('<circle cx="10" cy="7.8" r="3.4"/><path d="M3.8 19.6c.7-3.6 3.1-5.6 6.2-5.6 1.3 0 2.5.4 3.5 1"/><path d="M16.3 13.2l1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3z"/>'),
+  mFerias: I('<path d="M3.2 9h17.6l-1.7-4.6H4.9z"/><path d="M3.2 9a2.2 2.2 0 0 0 4.4 0 2.2 2.2 0 0 0 4.4 0 2.2 2.2 0 0 0 4.4 0 2.2 2.2 0 0 0 4.4 0"/><path d="M5 11.2V20h14v-8.8M10 20v-4.6h4V20"/>'),
+  mDisp: I('<rect x="6.5" y="2.6" width="11" height="18.8" rx="2.6"/><circle cx="12" cy="10.2" r="2.3"/><path d="M8.9 16.2c.6-1.5 1.7-2.3 3.1-2.3s2.5.8 3.1 2.3"/><path d="M10.6 5.2h2.8"/>'),
+  mCanal: I('<path d="M4 9.5V20h16V9.5"/><path d="M3 9.5 4.8 4h14.4L21 9.5c0 1.4-1.2 2.5-2.6 2.5s-2.6-1.1-2.6-2.5c0 1.4-1.2 2.5-2.6 2.5h-.4c-1.4 0-2.6-1.1-2.6-2.5 0 1.4-1.2 2.5-2.6 2.5S3 10.9 3 9.5z"/><path d="M9.5 20v-4.5h5V20"/>'),
+  mMedio: I('<path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18v3"/><rect x="4" y="8" width="16.5" height="11.5" rx="2.5"/><path d="M16 13.8h1.5"/>'),
+  ir: I('<path d="M5 12h13M13 7l5 5-5 5"/>'),
   plus: I('<path d="M12 5v14M5 12h14"/>'),
   user: I('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
   tent: I('<path d="M3 20L12 4l9 16z"/><path d="M12 4v16M9 20l3-6 3 6"/>'),
@@ -696,6 +723,7 @@ function vVender() {
     <div class="searchbar">
       <label class="search">${IC.buscar}<span class="sr">Buscar producto</span>
         <input id="q" type="search" inputmode="search" autocomplete="off" placeholder="Buscar aroma o producto" value="${esc(S.filtro.q)}"></label>
+      <button class="iconbtn" id="bLimpiar" aria-label="Borrar búsqueda" data-vacio="${S.filtro.q ? '0' : '1'}">${IC.borrar}</button>
       <button class="iconbtn accent" id="bScan" aria-label="Escanear código">${IC.scan}</button>
       <button class="iconbtn" id="bVoz" aria-label="Dictar venta">${IC.mic}</button>
     </div>`);
@@ -704,7 +732,9 @@ function vVender() {
   $('#bScan').onclick = () => abrirEscaner('vender');
   $('#bVoz').onclick = abrirVoz;
   const q = $('#q');
-  q.oninput = () => { S.filtro.q = q.value; pintarTiles(); };
+  const bL = $('#bLimpiar');
+  q.oninput = () => { S.filtro.q = q.value; bL.dataset.vacio = q.value ? '0' : '1'; pintarTiles(); };
+  bL.onclick = () => { q.value = ''; S.filtro.q = ''; bL.dataset.vacio = '1'; pintarTiles(); q.focus(); };
 
   const tHoy = D.tickets.filter(t => t.fecha === hoy() && (!vend || t.vendedor === vend));
   const totHoy = tHoy.reduce((a, t) => a + t.total, 0);
@@ -990,7 +1020,7 @@ function statsFeria(nombre) {
 function fichaFeria(fe) {
   const st = statsFeria(fe.nombre), activa = feriaActiva() === fe.nombre;
   const resultado = st.ganancia - st.comision - fe.costo;
-  const top = agrupar(st.vs, v => v.codigo, 'cant').map(([c, q]) => { const p = datos().prod[c]; return [p ? nombreProd(p) : c, q]; });
+  const top = agrupar(st.vs, v => v.codigo, 'cant').map(([c, q]) => { const p = datos().prod[c]; const t = st.vs.filter(v => v.codigo === c).reduce((a, v) => a + v.total, 0); return [p ? nombreProd(p) : c, q, '', p ? 'p:' + c : '']; });
   const porVend = agrupar(st.vs, 'vendedor', 'total');
   const g = gastoDeFeria(fe.nombre);
   hoja({ titulo: fe.nombre, cuerpo: () => `
@@ -1005,6 +1035,7 @@ function fichaFeria(fe) {
     ${fe.notas ? `<h3 style="margin-top:16px">Notas</h3><p class="small" style="margin:0">${esc(fe.notas)}</p>` : ''}`,
     pie: `<button class="btn soft" id="ffEd">${IC.edit} Editar</button>${activa ? `<button class="btn soft" id="ffOtra" style="flex:1">Cambiar feria</button>` : `<button class="btn primary" id="ffAct" style="flex:1">Usar hoy</button>`}`,
     alAbrir(h) {
+      h.addEventListener('click', e => { const b = e.target.closest('[data-bar]'); if (b) abrirBarra(b.dataset.bar, { feria: fe.nombre, volver: 'Volver a Lo vendido' }); });
       $('#ffEd', h).onclick = () => { cerrarHoja(); setTimeout(() => editar('ferias', fe), 220); };
       const o = $('#ffOtra', h); if (o) o.onclick = () => { cerrarHoja(); setTimeout(elegirFeria, 220); };
       const a = $('#ffAct', h); if (a) a.onclick = () => { S.disp.feria = fe.nombre; S.disp.feriaFecha = hoy(); store.set('disp', S.disp); cerrarHoja(); render(); toast('Feria activa: ' + fe.nombre); };
@@ -1320,7 +1351,7 @@ function vStock() {
   $('#main').innerHTML = `
     <div class="toolbar"><label class="search">${IC.buscar}<input id="sq" type="search" placeholder="Buscar" value="${esc(f.q)}" autocomplete="off"></label>
       <button class="iconbtn" id="sScan" aria-label="Buscar por código">${IC.scan}</button></div>
-    <div class="chips" id="sChips" style="padding-top:0">${[['todos','Todos'],['pedir','Para reponer · ' + nPedir],['agotado','Agotados'],...D.lineas.map(l => ['l:' + l, l])]
+    <div class="chips" id="sChips" style="padding-top:0">${[['todos','Todos'],['pedir','Para reponer · ' + nPedir],['agotado','Agotados'],...gruposVenta(D).map(([k, t]) => ['l:' + k, t])]
       .map(([k, t]) => `<button class="chip" data-e="${esc(k)}" aria-pressed="${f.estado === k}">${esc(t)}</button>`).join('')}</div>
     ${nPedir ? `<button class="banner" id="bPedido" style="width:100%;text-align:left;margin:4px 0 12px"><div style="flex:1"><b>${nPedir} productos para reponer</b>Armá el pedido por proveedor y mandalo por WhatsApp.</div>${IC.chev}</button>` : ''}
     <div class="list" id="sList"></div>`;
@@ -1328,7 +1359,7 @@ function vStock() {
     const nq = norm(f.q).split(/\s+/).filter(Boolean);
     let l = D.productos.filter(p => { const t = norm([p.linea, p.aroma, p.codigo, p.barras.join(' ')].join(' ')); return nq.every(x => t.includes(x)); });
     if (f.estado === 'pedir') l = l.filter(p => p.estado !== 'OK'); else if (f.estado === 'agotado') l = l.filter(p => p.estado === 'AGOTADO');
-    else if (f.estado.startsWith('l:')) l = l.filter(p => p.linea === f.estado.slice(2));
+    else if (f.estado.startsWith('l:')) l = l.filter(p => grupoDe(p) === f.estado.slice(2));
     const orden = { AGOTADO: 0, PEDIR: 1, OK: 2 };
     if (f.estado !== 'todos') l = l.slice().sort((a, b) => orden[a.estado] - orden[b.estado]);
     $('#sList').innerHTML = l.map(p => `<button class="li" data-c="${esc(p.codigo)}">
@@ -1345,17 +1376,46 @@ function vStock() {
   const bp = $('#bPedido'); if (bp) bp.onclick = armarPedido;
   fab(() => editar('productos', null));
 }
+function abrirBarra(clave, ctx = {}) {
+  const D = datos(), i = clave.indexOf(':'), tipo = clave.slice(0, i), val = clave.slice(i + 1);
+  if (tipo === 'p') return fichaProducto(val, ctx);
+  if (tipo === 'y') { S.mes = val; return render(); }
+  if (tipo === 'f') { const fe = D.ferias.find(x => x.nombre === val); if (fe) return fichaFeria(fe); }
+  const base = ctx.vs || D.ventas;
+  const dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+  const filtro = { l: v => v.linea === val, v: v => v.vendedor === val, m: v => v.medio === val, f: v => (v.feria || 'Feria sin nombre') === val,
+    w: v => (new Date(v.fecha + 'T12:00').getDay() + 6) % 7 === +val, d: v => v.fecha === val }[tipo];
+  if (!filtro) return;
+  const titulo = tipo === 'w' ? 'Los ' + dias[+val] + (dias[+val].endsWith('s') ? '' : 's') : tipo === 'd' ? fechaLarga(val) : tipo === 'v' ? 'Ventas de ' + val : tipo === 'm' ? 'Pagos con ' + val : val;
+  detalleSegmento(titulo, ctx.periodo || '', base.filter(filtro), base, ctx);
+}
+function detalleSegmento(titulo, periodo, vs, base, ctx = {}) {
+  const total = vs.reduce((a, v) => a + v.total, 0), totBase = base.reduce((a, v) => a + v.total, 0);
+  const unid = vs.reduce((a, v) => a + v.cant, 0), gan = vs.reduce((a, v) => a + v.ganancia, 0);
+  const prods = agrupar(vs, v => v.codigo, 'cant').map(([c, q]) => { const p = datos().prod[c]; const t = vs.filter(v => v.codigo === c).reduce((a, v) => a + v.total, 0); return [p ? nombreProd(p) : c, q, fmt(t), p ? 'p:' + c : '']; });
+  hoja({ titulo, cuerpo: () => `
+    ${periodo ? `<div class="muted small" style="margin-top:-6px">${esc(periodo)}</div>` : ''}
+    <div class="kpis" style="margin-top:12px">
+      <div class="kpi"><span>Vendido</span><b>${fmt(total)}</b><small class="muted">${totBase ? pct(total / totBase) + ' del total' : ''}</small></div>
+      <div class="kpi"><span>Unidades</span><b>${fmt(unid)}</b><small class="muted">ganancia ${fmt(gan)}</small></div>
+    </div>
+    ${prods.length ? `<h3 style="margin-top:16px">Lo vendido <span class="muted small" style="font-weight:500">· tocá un producto</span></h3>${barras(prods, fmt)}` : '<p class="muted small" style="margin-top:14px">Sin ventas.</p>'}`,
+    pie: `<button class="btn primary block" data-cerrar style="min-height:54px">${IC.back} Volver al gráfico</button>`,
+    alAbrir(h) { h.addEventListener('click', e => { const b = e.target.closest('[data-bar]'); if (b) fichaProducto(b.dataset.bar.slice(2), { vs, titulo, volver: 'Volver a ' + titulo }); }); } });
+}
 function fab(fn, icon = IC.plus, label = 'Agregar') {
   const f = document.createElement('button'); f.className = 'fab'; f.innerHTML = icon; f.setAttribute('aria-label', label); f.onclick = fn; $('#main').appendChild(f);
 }
-function fichaProducto(codigo) {
+function fichaProducto(codigo, ctx = {}) {
   const D = datos(), p = D.prod[codigo]; if (!p) return;
+  const vsCtx = ctx.feria ? D.ventas.filter(v => v.codigo === codigo && v.feria === ctx.feria) : ctx.vs ? ctx.vs.filter(v => v.codigo === codigo) : null;
   const vs = D.ventas.filter(v => v.codigo === codigo);
   const ultimas = vs.slice().sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, 5);
   const margen = p.precio ? (p.precio - p.costo) / p.precio : null;
   const cobertura = p.v30 > 0 ? Math.round(p.stock / (p.v30 / 30)) : null;
   hoja({ titulo: (p.aroma || p.linea), cuerpo: () => `
     <div class="muted small" style="margin-top:-6px">${esc(p.linea)} · ${esc(p.presentacion)} · ${esc(p.codigo)}</div>
+    ${vsCtx ? `<div class="banner" style="margin:12px 0 0;display:block"><b>${esc(ctx.feria ? 'En ' + ctx.feria : ctx.titulo || 'En este período')}</b>${fmt(vsCtx.reduce((a, v) => a + v.cant, 0))} unidades · ${gs(vsCtx.reduce((a, v) => a + v.total, 0))} · ganancia ${gs(vsCtx.reduce((a, v) => a + v.ganancia, 0))}</div>` : ''}
     <div class="kpis" style="margin-top:12px">
       <div class="kpi"><span>Stock</span><b>${fmt(p.stock)}</b><small class="${p.estado === 'OK' ? 'up' : 'down'}">${p.estado === 'OK' ? 'OK' : p.estado === 'PEDIR' ? 'Reponer ' + fmt(p.pedir) : 'Agotado'}</small></div>
       <div class="kpi"><span>Precio</span><b>${fmt(p.precio)}</b><small class="muted">margen ${pct(margen)}</small></div>
@@ -1371,6 +1431,7 @@ function fichaProducto(codigo) {
       <button class="btn soft" id="fpCompra">${IC.plus} Compra</button><button class="btn soft" id="fpBaja">Baja / ajuste</button>
       <button class="btn soft" id="fpCod">${IC.scan} Asociar código</button><button class="btn soft" id="fpEdit">Editar datos</button>
     </div>`,
+    pie: ctx.volver ? `<button class="btn primary block" data-cerrar style="min-height:54px">${IC.back} ${esc(ctx.volver)}</button>` : '',
     alAbrir(h) {
       $('#fpCompra', h).onclick = () => { cerrarHoja(); setTimeout(() => formCompra(codigo), 220); };
       $('#fpBaja', h).onclick = () => { cerrarHoja(); setTimeout(() => formBaja(codigo), 220); };
@@ -1439,7 +1500,7 @@ function fichaTicket(clave) {
     <p class="small muted">Ganancia bruta ${gs(t.lineas.reduce((a, l) => a + l.ganancia, 0))}${t.lineas[0].comision ? ' · comisión ' + gs(t.lineas.reduce((a, l) => a + l.comision, 0)) : ''}</p>`,
     pie: `<button class="btn danger" id="bAnular" style="flex:1">${IC.trash} Anular venta</button>`,
     alAbrir(h) {
-      $('#bAnular', h).onclick = () => confirmar('¿Anular esta venta?', 'Se borra de la planilla y el stock vuelve a sumarse.', 'Anular venta', () => {
+      $('#bAnular', h).onclick = () => confirmarConCodigo('¿Anular esta venta?', 'Se borra de la planilla y el stock vuelve a sumarse. Para confirmar, ingresá el código de autorización.', 'Anular venta', () => {
         const opPend = t.lineas[0]._op; if (opPend && desencolar(opPend)) { cerrarHoja(); render(); toast('Venta anulada'); return; }
         encolar(t.id ? { tipo: 'anularVenta', ventaId: t.id } : t.nro ? { tipo: 'anularVenta', nro: t.nro } : { tipo: 'anularVenta', filas: t.lineas.map(l => l._r).filter(Boolean) });
         cerrarHoja(); render(); toast('Venta anulada');
@@ -1526,7 +1587,9 @@ function resultados(D, ym) {
 }
 function barras(items, fmtV = fmt, color) {
   const max = Math.max(1, ...items.map(i => Math.abs(i[1])));
-  return `<div class="bars">${items.map(([l, v, extra]) => `<div class="bar"><span class="lb" title="${esc(l)}">${esc(l)}</span><span class="tr"><i style="width:${Math.max(2, Math.abs(v) / max * 100)}%;${color ? 'background:' + color : ''}${v < 0 ? ';background:var(--chili)' : ''}"></i></span><span class="vl">${fmtV(v)}${extra ? `<span class="tiny muted" style="display:block;font-weight:500">${extra}</span>` : ''}</span></div>`).join('')}</div>`;
+  // Si un ítem trae una clave (4.º elemento), la barra se puede tocar para ver el detalle.
+  return `<div class="bars">${items.map(([l, v, extra, clave]) => { const tag = clave ? 'button' : 'div';
+    return `<${tag} class="bar"${clave ? ` data-bar="${esc(clave)}" aria-label="Ver detalle de ${esc(l)}"` : ''}><span class="lb" title="${esc(l)}">${esc(l)}</span><span class="tr"><i style="width:${Math.max(2, Math.abs(v) / max * 100)}%;${color ? 'background:' + color : ''}${v < 0 ? ';background:var(--chili)' : ''}"></i></span><span class="vl">${fmtV(v)}${extra ? `<span class="tiny muted" style="display:block;font-weight:500">${extra}</span>` : ''}</span>${clave ? IC.chev.replace('<svg ', '<svg class="go" ') : ''}</${tag}>`; }).join('')}</div>`;
 }
 function agrupar(arr, k, v) { const m = {}; arr.forEach(x => { const kk = typeof k === 'function' ? k(x) : x[k]; m[kk] = (m[kk] || 0) + (typeof v === 'function' ? v(x) : x[v]); }); return Object.entries(m).sort((a, b) => b[1] - a[1]); }
 function vPanel() {
@@ -1539,11 +1602,12 @@ function vPanel() {
   const porDia = Array.from({ length: nd }, (_, i) => { const f = ym + '-' + String(i + 1).padStart(2, '0'); return [i + 1, R.vs.filter(v => v.fecha === f).reduce((s, v) => s + v.total, 0)]; });
   const maxDia = Math.max(1, ...porDia.map(d => d[1]));
   const ferias = {}; R.vs.forEach(v => { const k = v.feria || (v.canal === 'Ferias y eventos' ? 'Feria sin nombre' : ''); if (!k) return; ferias[k] = ferias[k] || { v: 0, g: 0 }; ferias[k].v += v.total; ferias[k].g += v.ganancia; });
-  const feriasRows = Object.entries(ferias).map(([k, x]) => { const f = D.ferias.find(z => z.nombre === k); const res = x.g - (f ? f.costo : 0); return [k, res, `vendió ${fmt(x.v)}${f && f.costo ? ' · stand ' + fmt(f.costo) : ''}`]; }).sort((a2, b2) => b2[1] - a2[1]);
-  const top = agrupar(R.vs, v => v.codigo, 'total').slice(0, 10).map(([c, v]) => { const p = D.prod[c]; return [p ? (p.aroma || p.linea) + ' · ' + p.linea : c, v]; });
-  const dias = DIAS.map((d, i) => [d, R.vs.filter(v => { const x = new Date(v.fecha + 'T12:00').getDay(); return (x + 6) % 7 === i; }).reduce((s, v) => s + v.total, 0)]);
+  const feriasRows = Object.entries(ferias).map(([k, x]) => { const f = D.ferias.find(z => z.nombre === k); const res = x.g - (f ? f.costo : 0); return [k, res, `vendió ${fmt(x.v)}${f && f.costo ? ' · stand ' + fmt(f.costo) : ''}`, 'f:' + k]; }).sort((a2, b2) => b2[1] - a2[1]);
+  const top = agrupar(R.vs, v => v.codigo, 'total').slice(0, 10).map(([c, v]) => { const p = D.prod[c]; return [p ? (p.aroma || p.linea) + ' · ' + p.linea : c, v, '', p ? 'p:' + c : '']; });
+  const dias = DIAS.map((d, i) => [d, R.vs.filter(v => { const x = new Date(v.fecha + 'T12:00').getDay(); return (x + 6) % 7 === i; }).reduce((s, v) => s + v.total, 0), '', 'w:' + i]);
+  const conClave = (arr, pre) => arr.map(([k, v]) => [k, v, '', pre + k]);
   const porVend = D.vendedores.map(v => { const vs = R.vs.filter(x => x.vendedor === v.nombre); const t = vs.reduce((s, x) => s + x.total, 0); const c = vs.reduce((s, x) => s + x.comision, 0);
-    return [v.nombre, t, (c ? 'comisión ' + fmt(c) : 'sin comisión') + (v.meta ? ' · meta ' + pct(t / v.meta) : '')]; }).filter(x => x[1] > 0).sort((x, y) => y[1] - x[1]);
+    return [v.nombre, t, (c ? 'comisión ' + fmt(c) : 'sin comisión') + (v.meta ? ' · meta ' + pct(t / v.meta) : ''), 'v:' + v.nombre]; }).filter(x => x[1] > 0).sort((x, y) => y[1] - x[1]);
   const porCobrar = D.ventas.filter(v => v.cobro === 'Pendiente').reduce((s, v) => s + v.total, 0);
   const porPagar = D.compras.filter(c => c.estado === 'Pendiente').reduce((s, c) => s + c.total, 0);
   const valorInv = D.productos.reduce((s, p) => s + Math.max(p.stock, 0) * p.costo, 0);
@@ -1568,21 +1632,23 @@ function vPanel() {
         <tr><td>Gastos operativos</td><td>${menos(R.gastos)}</td></tr><tr><td>Comisiones</td><td>${menos(R.comis)}</td></tr>
         <tr class="tot"><td>Ganancia neta <span class="muted small">${pct(R.margenNeto)}</span></td><td class="${R.neta < 0 ? 'down' : ''}">${gs(R.neta)}</td></tr></table>
         <p class="small muted" style="margin-bottom:0">${equilibrio ? `Para cubrir los gastos fijos del mes (${fmt(R.fijos)}) hay que vender ${gs(equilibrio)}. Vas ${pct(R.ventas / equilibrio)}.` : 'Cargá gastos fijos para ver el punto de equilibrio.'}</p></div>
-      <div class="card"><h3>Ventas por día</h3><div class="cols">${porDia.map(([d, v]) => `<div class="c" title="${d}: ${gs(v)}"><i class="${v ? '' : 'z'}" style="height:${Math.max(2, v / maxDia * 110)}px"></i><span>${d % 5 === 0 || d === 1 ? d : ''}</span></div>`).join('')}</div></div>
+      <div class="card"><h3>Ventas por día</h3><div class="cols">${porDia.map(([d, v]) => `<button class="c" data-bar="d:${ym}-${String(d).padStart(2, '0')}" title="${d}: ${gs(v)}" aria-label="Día ${d}: ${gs(v)}"><i class="${v ? '' : 'z'}" style="height:${Math.max(2, v / maxDia * 110)}px"></i><span>${d % 5 === 0 || d === 1 ? d : ''}</span></button>`).join('')}</div></div>
       <div class="card"><h3>Ferias del mes</h3>${feriasRows.length ? barras(feriasRows, fmt, 'var(--sage)') + '<p class="tiny muted" style="margin:8px 0 0">Resultado = ganancia bruta de lo vendido − costo del stand.</p>' : '<p class="muted small">Elegí la feria del día en Vender y acá vas a ver cuánto dejó cada una.</p>'}</div>
       <div class="card"><h3>Más vendidos</h3>${top.length ? barras(top) : '<p class="muted small">Sin ventas este mes.</p>'}</div>
-      <div class="card"><h3>Por línea</h3>${barras(agrupar(R.vs, 'linea', 'total').slice(0, 8))}</div>
+      <div class="card"><h3>Por línea</h3>${barras(conClave(agrupar(R.vs, 'linea', 'total').slice(0, 8), 'l:'))}</div>
       <div class="card"><h3>Por vendedor</h3>${porVend.length ? barras(porVend, fmt, 'var(--plum-2)') : '<p class="muted small">Sin ventas este mes.</p>'}</div>
-      <div class="card"><h3>Por medio de pago</h3>${barras(agrupar(R.vs, 'medio', 'total'))}</div>
+      <div class="card"><h3>Por medio de pago</h3>${barras(conClave(agrupar(R.vs, 'medio', 'total'), 'm:'))}</div>
       <div class="card"><h3>Por día de la semana</h3>${barras(dias, fmt, 'var(--plum-2)')}</div>
       <div class="card"><h3>Caja del mes</h3><table class="t"><tr><td>Cobrado de ventas</td><td>${fmt(R.cobrado)}</td></tr><tr><td>Pagado a proveedores</td><td>${menos(R.pagado)}</td></tr>
         <tr><td>Gastos</td><td>${menos(R.gastos)}</td></tr><tr><td>Comisiones</td><td>${menos(R.comis)}</td></tr><tr class="tot"><td>Flujo de caja</td><td class="${R.flujo < 0 ? 'down' : ''}">${gs(R.flujo)}</td></tr></table>
         <p class="small muted" style="margin-bottom:0">Pendiente: por cobrar ${gs(porCobrar)} · por pagar ${gs(porPagar)}</p></div>
       <div class="card"><h3>Inventario</h3><table class="t"><tr><td>Valor a costo</td><td>${fmt(valorInv)}</td></tr><tr><td>Valor a precio de venta</td><td>${fmt(valorVenta)}</td></tr>
         <tr><td>Para reponer / agotados</td><td>${D.productos.filter(p => p.estado === 'PEDIR').length} / ${D.productos.filter(p => p.estado === 'AGOTADO').length}</td></tr><tr><td>Pérdidas por bajas del mes</td><td>${fmt(R.perdidas)}</td></tr></table></div>
-      <div class="card" style="grid-column:1/-1"><h3>Año ${año}: ventas y ganancia neta</h3><div class="cols" style="height:150px">${anio.map(([m, v, n]) => `<div class="c" title="${m}: ventas ${gs(v)} · neta ${gs(n)}"><i class="${v ? '' : 'z'}" style="height:${Math.max(2, v / maxAnio * 110)}px;background:var(--saffron)"></i><span>${m}</span></div>`).join('')}</div>
+      <div class="card" style="grid-column:1/-1"><h3>Año ${año}: ventas y ganancia neta</h3><div class="cols" style="height:150px">${anio.map(([m, v, n], i) => `<button class="c" data-bar="y:${año}-${String(i + 1).padStart(2, '0')}" title="${m}: ventas ${gs(v)} · neta ${gs(n)}" aria-label="Ver ${m}"><i class="${v ? '' : 'z'}" style="height:${Math.max(2, v / maxAnio * 110)}px;background:var(--saffron)"></i><span>${m}</span></button>`).join('')}</div>
         <p class="small muted" style="margin-bottom:0">Acumulado: ventas ${gs(anio.reduce((s, x) => s + x[1], 0))} · ganancia neta ${gs(anio.reduce((s, x) => s + x[2], 0))}</p></div>
     </div>`;
+  $('#main').onclick = e => { if (S.vista !== 'panel') return; const b = e.target.closest('[data-bar]'); if (!b) return;
+    abrirBarra(b.dataset.bar, { vs: R.vs, periodo: MESES[+ym.slice(5) - 1] + ' ' + ym.slice(0, 4), titulo: 'En ' + MESES[+ym.slice(5) - 1].toLowerCase(), volver: 'Volver al gráfico' }); };
   $('#mP').onclick = () => { S.mes = mesAnterior(ym); render(); };
   $('#mN').onclick = () => { S.mes = mesSiguiente(ym); render(); };
 }
@@ -1691,11 +1757,11 @@ function vMas() {
   const n = { clientes: D.clientes.length, proveedores: D.proveedores.length, vendedores: D.vendedores.length, ferias: D.ferias.length };
   $('#main').innerHTML = `
     <h2>Bases de datos</h2>
-    <div class="list">${[['clientes', 'Clientes'], ['proveedores', 'Proveedores'], ['vendedores', 'Vendedores'], ['ferias', 'Ferias y eventos']].map(([k, t]) =>
-      `<button class="li" data-b="${k}"><div class="nm"><b>${t}</b><span>${n[k]} registrados</span></div>${IC.chev}</button>`).join('')}</div>
+    <div class="list">${[['clientes', 'Clientes', IC.mClientes, '#7B3A5A'], ['proveedores', 'Proveedores', IC.mProv, '#B9781F'], ['vendedores', 'Vendedores', IC.mVend, '#5F7F4E'], ['ferias', 'Ferias y eventos', IC.mFerias, '#B0455C']].map(([k, t, ic, col]) =>
+      `<button class="li" data-b="${k}"><span class="mi" style="--t:${col}">${ic}</span><div class="nm"><b>${t}</b><span>${n[k]} registrados</span></div><span class="goar">${IC.ir}</span></button>`).join('')}</div>
     <h2>Este dispositivo</h2>
     <div class="list">
-      <button class="li" id="mVend"><div class="nm"><b>Vendedor</b><span>${esc(S.disp.vendedor || 'Sin elegir')}</span></div>${IC.chev}</button>
+      <button class="li" id="mVend"><span class="mi" style="--t:#5B6E99">${IC.mDisp}</span><div class="nm"><b>Vendedor</b><span>${esc(S.disp.vendedor || 'Sin elegir')}</span></div><span class="goar">${IC.ir}</span></button>
       <div class="li"><div class="nm"><b>Canal cuando no hay feria</b><span>Para ventas fuera de ferias</span></div><select id="mCanal" style="max-width:48%;min-height:42px;border-radius:10px;border:1px solid var(--line-2);background:#fff;padding:0 8px">${D.listas['Canales de venta'].map(c => `<option ${c === S.disp.canal ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
       <div class="li"><div class="nm"><b>Medio de pago por defecto</b></div><select id="mMedio" style="max-width:48%;min-height:42px;border-radius:10px;border:1px solid var(--line-2);background:#fff;padding:0 8px">${D.listas['Medios de pago'].map(c => `<option ${c === S.disp.medio ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
     </div>
@@ -1807,6 +1873,26 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && pilaHojas.
 function confirmar(titulo, texto, accion, fn) {
   hoja({ titulo, cuerpo: () => `<p style="margin-top:0">${esc(texto)}</p>`, pie: `<button class="btn soft" data-cerrar style="flex:1">Cancelar</button><button class="btn danger" style="flex:1" id="cfOk">${esc(accion)}</button>`,
     alAbrir(h) { $('#cfOk', h).onclick = () => { cerrarHoja(true); setTimeout(fn, 10); }; } });
+}
+const CODIGO_ANULAR = '1403';
+function confirmarConCodigo(titulo, texto, accion, fn) {
+  hoja({ titulo, cuerpo: () => `<p style="margin-top:0">${esc(texto)}</p>
+      <div class="field"><label for="cfCod">Código de autorización</label>
+        <input id="cfCod" class="codeIn" type="password" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="••••"></div>
+      <p class="tiny" id="cfErr" style="color:var(--chili);font-weight:600;min-height:1em;margin:4px 0 0"></p>`,
+    pie: `<button class="btn soft" data-cerrar style="flex:1">Cancelar</button><button class="btn danger" style="flex:1" id="cfOk">${esc(accion)}</button>`,
+    alAbrir(h) {
+      const inp = $('#cfCod', h), err = $('#cfErr', h);
+      setTimeout(() => inp.focus(), 250);
+      const probar = () => {
+        if (inp.value.trim() === CODIGO_ANULAR) { cerrarHoja(true); setTimeout(fn, 10); return; }
+        inp.classList.remove('mal'); void inp.offsetWidth; inp.classList.add('mal'); vibrar([60, 40, 60]);
+        err.textContent = inp.value ? 'Código incorrecto. La venta no se anuló.' : 'Ingresá el código para anular.'; inp.value = ''; inp.focus();
+      };
+      $('#cfOk', h).onclick = probar;
+      inp.onkeydown = e => { if (e.key === 'Enter') probar(); };
+      inp.oninput = () => { err.textContent = ''; inp.classList.remove('mal'); };
+    } });
 }
 let toastT;
 function toast(msg, accion, fn) {
