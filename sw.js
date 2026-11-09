@@ -1,5 +1,5 @@
 // Aroma Studyo: guarda la app en el celular para que abra aunque no haya señal.
-const CACHE = 'aroma-studyo-v18';
+const CACHE = 'aroma-studyo-v19';
 const BASE = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(BASE)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {

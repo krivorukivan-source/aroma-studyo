@@ -204,15 +204,15 @@ h3{font-size:16px;font-weight:700;margin:0 0 8px}
 .desc .dr{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:30px;font-size:15px}
 .desc .dr label{font-weight:700}
 .dctl{display:flex;align-items:center;gap:6px}
-.dIn{width:96px;height:42px;border-radius:12px;border:1.5px solid var(--line-2);background:#fff;padding:0 10px;font-size:17px;font-weight:700;text-align:right}
+.dIn{width:112px;height:42px;border-radius:12px;border:1.5px solid var(--line-2);background:#fff;padding:0 10px;font-size:17px;font-weight:700;text-align:right}
 .dIn:focus{border-color:var(--saffron);outline:none}
-.aIn{width:120px;height:42px;border-radius:12px;border:1.5px solid var(--line-2);background:#fff;padding:0 10px;font-size:17px;font-weight:700;text-align:right}
-.aIn:focus{border-color:var(--saffron);outline:none}
-.dunit{min-width:44px;text-align:center;font-weight:700;font-size:14px;color:var(--ink-2)}
 .dtipo{display:flex;border:1.5px solid var(--line-2);border-radius:12px;overflow:hidden;background:#fff}
 .dtipo button{min-width:44px;height:39px;font-weight:700;font-size:14px;color:var(--ink-2)}
 .dtipo button[aria-pressed="true"]{background:var(--saffron-soft);color:var(--ink)}
 .desc .dm span:last-child{color:var(--sage);font-weight:700}
+.desc .am span:last-child{color:var(--saffron-ink, #9A5B12)}
+.ajuste{display:flex;flex-direction:column;gap:2px;padding:10px 0}
+.ajuste + .ajuste{border-top:1px dashed var(--line-2)}
 .derr{color:var(--chili);font-size:13px;font-weight:600;margin-top:4px}
 .total{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 6px}
 .total b{font-size:28px;font-weight:800;letter-spacing:-.02em}
@@ -708,7 +708,7 @@ function vVender() {
 
   const tHoy = D.tickets.filter(t => t.fecha === hoy() && (!vend || t.vendedor === vend));
   const totHoy = tHoy.reduce((a, t) => a + t.total, 0);
-  const lineasChips = [['frec', 'Más vendidos'], ['todos', 'Todos (A-Z)'], ...D.lineas.map(l => [l, l])];
+  const lineasChips = [['frec', 'Más vendidos'], ['todos', 'Todos (A-Z)'], ...gruposVenta(D)];
   $('#main').innerHTML = `
     <div class="sellgrid"><div>
       <div class="chips" id="chips">${lineasChips.map(([k, t]) => `<button class="chip" data-l="${esc(k)}" aria-pressed="${S.filtro.linea === k}">${esc(t)}</button>`).join('')}</div>
@@ -725,6 +725,15 @@ function vVender() {
     const nt = [...$('#tiles').children].find(x => x.dataset.c === c); if (nt) nt.classList.add('bump'); };
   pintarTiles(); pintarCarrito();
 }
+// Pastillas de Vender: los sahumerios por línea; difusores y porta sahumerios, cada uno en una sola pastilla.
+const CAT_JUNTAS = { 'Difusores': 'Difusores', 'Porta sahumerios y accesorios': 'Porta sahumerios' };
+function grupoDe(p) { return CAT_JUNTAS[p.categoria] ? 'cat:' + p.categoria : p.linea; }
+function gruposVenta(D) {
+  const vistos = new Map();
+  D.productos.forEach(p => { const k = grupoDe(p); if (!vistos.has(k)) vistos.set(k, CAT_JUNTAS[p.categoria] || p.linea); });
+  const e = [...vistos.entries()];
+  return e.filter(([k]) => !k.startsWith('cat:')).concat(e.filter(([k]) => k.startsWith('cat:')));
+}
 function productosFiltrados() {
   const D = datos(); const q = norm(S.filtro.q);
   let lista = D.productos;
@@ -737,7 +746,8 @@ function productosFiltrados() {
   } else if (S.filtro.linea === 'todos') {
     lista = lista.slice().sort((a, b) => a.linea.localeCompare(b.linea, 'es') || a.aroma.localeCompare(b.aroma, 'es'));
   } else {
-    lista = lista.filter(p => p.linea === S.filtro.linea);
+    lista = lista.filter(p => grupoDe(p) === S.filtro.linea);
+    if (S.filtro.linea.startsWith('cat:')) lista = lista.slice().sort((a, b) => a.linea.localeCompare(b.linea, 'es') || a.aroma.localeCompare(b.aroma, 'es'));
   }
   return lista;
 }
@@ -789,15 +799,28 @@ function fraccionDescuento() {
   return d.tipo === '%' ? Math.min(v, 100) / 100 : Math.min(v, sub) / sub;
 }
 function montoDescuento() { return subtotalCarrito() * fraccionDescuento(); }
-// Adicional: monto en Gs. que se suma al total (envío, envoltorio, recargo…). Por defecto 0.
-function adicional() { if (!S.adic) S.adic = { valor: 0 }; return S.adic; }
-function montoAdicional() { return S.carrito.length ? Math.max(0, num(adicional().valor)) : 0; }
+// Adicional: se suma al total (envío, envoltorio, recargo…), en % del subtotal o en Gs. Por defecto 0.
+function adicional() { if (!S.adic) S.adic = { valor: 0, tipo: 'Gs.' }; return S.adic; }
+function montoAdicional() {
+  const a = adicional(), v = Math.max(0, num(a.valor)), sub = subtotalCarrito();
+  if (!S.carrito.length || !v) return 0;
+  return a.tipo === '%' ? sub * v / 100 : v;
+}
+// Texto que se muestra en el campo (Gs. con puntos de miles; % tal cual).
+function textoAjuste(o) { const v = num(o.valor); if (!v) return ''; return o.tipo === 'Gs.' ? fmt(v) : String(o.valor).replace('.', ','); }
+// Interpreta lo escrito según el tipo: Gs. solo dígitos (los puntos son de miles); % admite decimales.
+function leerAjuste(o, txt) {
+  if (o.tipo === 'Gs.') { const d = txt.replace(/\D/g, ''); o.valor = d ? Number(d) : 0; return d ? fmt(Number(d)) : ''; }
+  let t = txt.replace(/[^\d.,]/g, '').replace('.', ','); const i = t.indexOf(','); if (i >= 0) t = t.slice(0, i + 1) + t.slice(i + 1).replace(/,/g, '');
+  o.valor = t.replace(',', '.') || 0; return t;
+}
 function totalCarrito() { return subtotalCarrito() - montoDescuento() + montoAdicional(); }
 function errorDescuento() {
   const d = descuento(), v = num(d.valor);
   if (v < 0) return 'El descuento no puede ser negativo.';
   if (d.tipo === '%' && v > 100) return 'El descuento no puede pasar de 100%.';
   if (d.tipo === 'Gs.' && v > subtotalCarrito()) return 'El descuento no puede ser mayor que el subtotal.';
+  if (num(adicional().valor) < 0) return 'El adicional no puede ser negativo.';
   return '';
 }
 function pintarCarrito() {
@@ -827,12 +850,18 @@ function htmlCarrito(enHoja) {
       </div>`; }).join('')}</div>
     <div class="desc">
       <div class="dr"><span class="muted">Subtotal</span><span class="num" data-sub>${gs(subtotalCarrito())}</span></div>
-      <div class="dr"><label for="dIn">Descuento</label>
-        <div class="dctl"><input id="dIn" class="dIn" inputmode="decimal" autocomplete="off" value="${esc(String(descuento().valor))}" aria-label="Descuento">
-          <div class="dtipo">${['%', 'Gs.'].map(t => `<button data-dtipo="${t}" aria-pressed="${descuento().tipo === t}">${t}</button>`).join('')}</div></div></div>
-      <div class="dr dm ${montoDescuento() ? '' : 'hidden'}" data-dmrow><span class="muted">Ahorro del cliente</span><span class="num" data-dm>−${fmt(montoDescuento())}</span></div>
-      <div class="dr"><label for="aIn">Adicional</label>
-        <div class="dctl"><input id="aIn" class="aIn" inputmode="numeric" autocomplete="off" value="${montoAdicional() ? esc(fmt(montoAdicional())) : ''}" placeholder="0" aria-label="Adicional en guaraníes"><span class="dunit">Gs.</span></div></div>
+      <div class="ajuste">
+        <div class="dr"><label for="dIn">Descuento</label>
+          <div class="dctl"><input id="dIn" class="dIn" data-aj="d" inputmode="decimal" autocomplete="off" value="${esc(textoAjuste(descuento()))}" placeholder="0" aria-label="Descuento">
+            <div class="dtipo">${['%', 'Gs.'].map(t => `<button data-dtipo="${t}" aria-pressed="${descuento().tipo === t}">${t}</button>`).join('')}</div></div></div>
+        <div class="dr dm ${montoDescuento() ? '' : 'hidden'}" data-dmrow><span class="muted">Ahorro del cliente</span><span class="num" data-dm>−${fmt(montoDescuento())}</span></div>
+      </div>
+      <div class="ajuste">
+        <div class="dr"><label for="aIn">Adicional</label>
+          <div class="dctl"><input id="aIn" class="dIn" data-aj="a" inputmode="decimal" autocomplete="off" value="${esc(textoAjuste(adicional()))}" placeholder="0" aria-label="Adicional">
+            <div class="dtipo">${['%', 'Gs.'].map(t => `<button data-atipo="${t}" aria-pressed="${adicional().tipo === t}">${t}</button>`).join('')}</div></div></div>
+        <div class="dr dm am ${montoAdicional() ? '' : 'hidden'}" data-amrow><span class="muted">Se suma al total</span><span class="num" data-am>+${fmt(montoAdicional())}</span></div>
+      </div>
       <div class="derr hidden" data-derr></div>
     </div>
     <div class="total"><span class="muted">Total</span><b class="num" data-tot>${gs(totalCarrito())}</b></div>
@@ -847,6 +876,8 @@ function refrescarMontos(root) {
   root.querySelectorAll('[data-sub]').forEach(x => x.textContent = gs(subtotalCarrito()));
   root.querySelectorAll('[data-dm]').forEach(x => x.textContent = '−' + fmt(montoDescuento()));
   root.querySelectorAll('[data-dmrow]').forEach(x => x.classList.toggle('hidden', !montoDescuento()));
+  root.querySelectorAll('[data-am]').forEach(x => x.textContent = '+' + fmt(montoAdicional()));
+  root.querySelectorAll('[data-amrow]').forEach(x => x.classList.toggle('hidden', !montoAdicional()));
   root.querySelectorAll('[data-tot]').forEach(x => x.textContent = gs(totalCarrito()));
   root.querySelectorAll('[data-regtxt]').forEach(x => x.textContent = 'Registrar venta · ' + gs(totalCarrito()));
   root.querySelectorAll('[data-derr]').forEach(x => { x.textContent = err; x.classList.toggle('hidden', !err); });
@@ -855,16 +886,12 @@ function refrescarMontos(root) {
 }
 function enlazarCarrito(root, alCambiar) {
   root.oninput = e => {
-    if (e.target.classList.contains('aIn')) {
-      const solo = e.target.value.replace(/\D/g, ''); adicional().valor = solo ? Number(solo) : 0;
-      const txt = solo ? fmt(Number(solo)) : ''; if (e.target.value !== txt) e.target.value = txt;
-      refrescarMontos(root); return;
-    }
-    if (!e.target.classList.contains('dIn')) return;
-    descuento().valor = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.');
+    const aj = e.target.dataset.aj; if (!aj) return;
+    const txt = leerAjuste(aj === 'a' ? adicional() : descuento(), e.target.value);
+    if (e.target.value !== txt) e.target.value = txt;
     refrescarMontos(root);
   };
-  root.onfocusin = e => { if ((e.target.classList.contains('dIn') || e.target.classList.contains('aIn')) && num(String(e.target.value).replace(/\D/g, '')) === 0) e.target.select(); };
+  root.onfocusin = e => { if (e.target.dataset.aj && e.target.value) e.target.select(); };
   root.onclick = e => {
     const t = e.target.closest('button'); if (!t) return;
     if (t.dataset.m !== undefined) { const l = S.carrito[+t.dataset.m]; l.cant--; if (l.cant <= 0) S.carrito.splice(+t.dataset.m, 1); }
@@ -872,6 +899,7 @@ function enlazarCarrito(root, alCambiar) {
     else if (t.dataset.alt !== undefined) { const l = S.carrito[+t.dataset.alt]; const viejo = l.codigo; l.codigo = t.dataset.c; l.alternativas = (l.alternativas || []).filter(x => x !== t.dataset.c).concat(viejo); }
     else if (t.dataset.medio) S.medio = t.dataset.medio;
     else if (t.dataset.dtipo) descuento().tipo = t.dataset.dtipo;
+    else if (t.dataset.atipo) adicional().tipo = t.dataset.atipo;
     else if (t.id === 'bReg') return registrarVenta();
     else if (t.id === 'bVaciar') { cancelarVenta(); return; }
     else return;
@@ -922,7 +950,7 @@ function registrarVenta() {
   const frD = fraccionDescuento(), ad = montoAdicional(), sub = subtotalCarrito();
   // En la planilla, cada línea guarda un solo ajuste: "Descuento %" neto (negativo si el adicional supera al descuento).
   const fr = sub ? frD - ad / sub : 0;
-  const notas = [frD ? 'Descuento ' + (descuento().tipo === '%' ? num(descuento().valor) + '%' : gs(num(descuento().valor))) : '', ad ? 'Adicional ' + gs(ad) : ''].filter(Boolean).join(' · ');
+  const notas = [frD ? 'Descuento ' + (descuento().tipo === '%' ? num(descuento().valor) + '%' : gs(num(descuento().valor))) : '', ad ? 'Adicional ' + (adicional().tipo === '%' ? num(adicional().valor) + '% (' + gs(ad) + ')' : gs(ad)) : ''].filter(Boolean).join(' · ');
   const op = encolar({ tipo: 'venta', fecha: hoy(), vendedor: S.disp.vendedor, canal: f ? 'Ferias y eventos' : S.disp.canal, feria: f,
     cliente: 'Varios', medio: medioActual(), cobro: 'Cobrado', lineas: S.carrito.map(l => ({ codigo: l.codigo, cant: l.cant, desc: fr ? Math.round(fr * 1e12) / 1e12 : '' })),
     obs: notas });
@@ -962,7 +990,7 @@ function statsFeria(nombre) {
 function fichaFeria(fe) {
   const st = statsFeria(fe.nombre), activa = feriaActiva() === fe.nombre;
   const resultado = st.ganancia - st.comision - fe.costo;
-  const top = agrupar(st.vs, v => v.codigo, 'cant').slice(0, 5).map(([c, q]) => { const p = datos().prod[c]; return [p ? nombreProd(p) : c, q]; });
+  const top = agrupar(st.vs, v => v.codigo, 'cant').map(([c, q]) => { const p = datos().prod[c]; return [p ? nombreProd(p) : c, q]; });
   const porVend = agrupar(st.vs, 'vendedor', 'total');
   const g = gastoDeFeria(fe.nombre);
   hoja({ titulo: fe.nombre, cuerpo: () => `
@@ -972,7 +1000,7 @@ function fichaFeria(fe) {
       <div class="kpi"><span>Costo del stand</span><b>${fe.costo ? fmt(fe.costo) : '—'}</b><small class="muted">${g ? 'cargado en Gastos' : fe.costo ? 'no está en Gastos' : 'sin cargar'}</small></div>
       <div class="kpi" style="grid-column:1/-1"><span>Resultado de la feria</span><b class="${resultado >= 0 ? 'up' : 'down'}">${resultado >= 0 ? '' : '−'}${gs(Math.abs(resultado))}</b><small class="muted">ganancia bruta ${fmt(st.ganancia)} − comisiones ${fmt(st.comision)} − stand ${fmt(fe.costo)}</small></div>
     </div>
-    ${top.length ? `<h3 style="margin-top:16px">Lo más vendido</h3>${barras(top, fmt)}` : '<p class="muted small" style="margin-top:14px">Todavía no hay ventas en esta feria.</p>'}
+    ${top.length ? `<h3 style="margin-top:16px">Lo vendido <span class="muted small" style="font-weight:500">· ${fmt(top.length)} ${top.length === 1 ? 'artículo' : 'artículos'}</span></h3>${barras(top, fmt)}` : '<p class="muted small" style="margin-top:14px">Todavía no hay ventas en esta feria.</p>'}
     ${porVend.length ? `<h3 style="margin-top:16px">Por vendedor</h3>${barras(porVend, fmt, 'var(--plum-2)')}` : ''}
     ${fe.notas ? `<h3 style="margin-top:16px">Notas</h3><p class="small" style="margin:0">${esc(fe.notas)}</p>` : ''}`,
     pie: `<button class="btn soft" id="ffEd">${IC.edit} Editar</button>${activa ? `<button class="btn soft" id="ffOtra" style="flex:1">Cambiar feria</button>` : `<button class="btn primary" id="ffAct" style="flex:1">Usar hoy</button>`}`,
